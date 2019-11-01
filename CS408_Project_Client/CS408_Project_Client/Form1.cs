@@ -39,14 +39,14 @@ namespace CS408_Project_Client
                 {
                     clientSocket.Connect(IP, portNum);
                     //??? Without entering an IP, we can still connect to the server. What is the reason?
-                    button_connect.Enabled = false;
-                    textBox_message.Enabled = true;
-                    button_send.Enabled = true;
                     connected = true;
-                    logs.AppendText("Connected to the server!\n");
+                 
+                    Thread sendUserName = new Thread(send_name);
+                    sendUserName.Start();
 
-                    //Thread receiveThread = new Thread(Recieve);
-                    //receiveThread.Start();
+
+                    Thread receiveApproval = new Thread(RecieveApproval);
+                    receiveApproval.Start();
                 }
                 catch
                 {
@@ -59,13 +59,56 @@ namespace CS408_Project_Client
             }
         }
 
+     
+        
+        private void RecieveApproval()
+        {
 
-        /*
-        private void Recieve()
+            while (connected)
+            {
+                try
+                {
+                    Byte[] buffer = new Byte[64];
+                    clientSocket.Receive(buffer);
+
+                    string incomingMessage = Encoding.Default.GetString(buffer);
+                    incomingMessage = incomingMessage.Substring(0, incomingMessage.IndexOf("\0"));
+                    if (incomingMessage == "NotSuccessful")
+                    {
+                        logs.AppendText("You are already connected or not registered");
+                        clientSocket.Close();
+
+                    }
+                    else
+                    {
+                        button_connect.Enabled = false;
+                        textBox_message.Enabled = true;
+                        button_send.Enabled = true;
+                        connected = true;
+                        logs.AppendText("Connected to the server!\n");
+
+                        Thread recieveThread = new Thread(recieve);
+                        recieveThread.Start();
+                    }
+
+                }
+                catch
+                {
+                    //Connection has lost...
+                    if (!terminating)
+                    {
+                        logs.AppendText("A client has disconnected\n");
+                    }
+                    clientSocket.Close();
+                }
+            }
+            
+        }
+
+        private void recieve()
         {
 
         }
-        */
 
         private void Form1_FormClosing(object sender, System.ComponentModel.CancelEventArgs e)
         {
@@ -74,12 +117,24 @@ namespace CS408_Project_Client
             Environment.Exit(0);
         }
 
+        private void send_name()
+        {
+            string username = textBox_name.Text;
+
+            if( username!="" && username.Length <= 64)
+            {
+                Byte[] buffer = new Byte[64];
+                buffer = Encoding.Default.GetBytes(username);
+                clientSocket.Send(buffer);
+               
+            }
+        }
+
         private void button_send_Click(object sender, EventArgs e)
         {
             //logs.AppendText("Inside button_send_Click\n"); //for debugging purposes
             string message = textBox_message.Text;
-            string userName = textBox_name.Text;
-
+            
             //For simplicity, the length of the message should be smaller than 64 characters
             if (message != "" && message.Length <= 64)
             {
@@ -87,7 +142,6 @@ namespace CS408_Project_Client
                 Byte[] buffer = new Byte[64];
                 buffer = Encoding.Default.GetBytes(message);
                 clientSocket.Send(buffer);
-                logs.AppendText(userName + ": " + message + "\n");
                 textBox_message.Clear();    //Clearing the textbox for the new usage
             }
         }

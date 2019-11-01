@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.ComponentModel;
 using System.Data;
 using System.Drawing;
+using System.IO;
 using System.Linq;
 using System.Net;
 using System.Net.Sockets;
@@ -18,16 +19,34 @@ namespace CS408_Project_Server
     {
         Socket serverSocket = new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp);
         List<Socket> clientSockets = new List<Socket>();
+        Dictionary<Socket,string> connectedUsers = new Dictionary<Socket,string>();
+        List<String> userDatabase = new List<string>();
 
         bool terminating = false;
         bool listening = false;
+                                   
 
         public Form1()
         {
+            create_db();
             Control.CheckForIllegalCrossThreadCalls = false;
             this.FormClosing += new FormClosingEventHandler(Form1_FormClosing);
             InitializeComponent();
             //logs.AppendText("Hey"); //For debugging purposes
+        }
+
+        private void create_db()
+        {
+            using (StreamReader reader = new StreamReader(@"C:\Users\MEHMET\Desktop\user_db.txt"))
+            {
+                string line;
+                while ((line = reader.ReadLine()) != null)
+                {
+
+                    userDatabase.Add(line);
+                    // here is up to you how to find the control to set and to assign the value.
+                }
+            }
         }
 
         private void button_listen_Click(object sender, EventArgs e)
@@ -67,10 +86,10 @@ namespace CS408_Project_Server
                     Socket newClient = serverSocket.Accept();
                     clientSockets.Add(newClient);
                     
-                    logs.AppendText("A client is connected.\n");
+                   
 
-                    Thread receiveThread = new Thread(Receive);
-                    receiveThread.Start();
+                    Thread receiveName = new Thread(ReceiveName);
+                    receiveName.Start();
                 }
                 catch
                 {
@@ -86,6 +105,51 @@ namespace CS408_Project_Server
             }
         }
 
+        private void ReceiveName()
+        {
+            Socket thisClient = clientSockets[clientSockets.Count() - 1];
+            
+                try
+                {
+                    Byte[] buffer = new Byte[64];
+                    thisClient.Receive(buffer);
+
+                    string username = Encoding.Default.GetString(buffer);
+                    username = username.Substring(0, username.IndexOf("\0"));
+
+                if(userDatabase.Contains(username)&& !connectedUsers.ContainsValue(username))
+                {
+                    connectedUsers.Add(thisClient, username);
+                    logs.AppendText(username+" is connected.\n");
+                    Thread receiveThread = new Thread(Receive);
+                    receiveThread.Start();
+                }
+                else
+                {
+                    string message = "NotSuccessful";
+                    Byte[] buffer2 = new Byte[64];
+                    buffer = Encoding.Default.GetBytes(message);
+                    thisClient.Send(buffer);
+                    clientSockets.Remove(thisClient);
+                    logs.AppendText(username + " is already connected or not in database");
+
+                }
+                  
+
+                }
+                catch
+                {
+                    //Connection has lost...
+                    if (!terminating)
+                    {
+                        logs.AppendText("A client has disconnected\n");
+                    }
+                    thisClient.Close();
+                    clientSockets.Remove(thisClient);
+                  
+                }
+            
+        }
         
         private void Receive()
         {
@@ -113,6 +177,7 @@ namespace CS408_Project_Server
                     }
                     thisClient.Close();
                     clientSockets.Remove(thisClient);
+                    connectedUsers.Remove(thisClient);
                     connected = false;
                 }
             }
