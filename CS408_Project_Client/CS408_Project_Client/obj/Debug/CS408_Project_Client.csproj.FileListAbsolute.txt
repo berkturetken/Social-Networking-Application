@@ -7,3 +7,12 @@ c:\users\berkt\documents\visual studio 2015\Projects\CS408_Project_Client\CS408_
 c:\users\berkt\documents\visual studio 2015\Projects\CS408_Project_Client\CS408_Project_Client\bin\Debug\CS408_Project_Client.pdb
 c:\users\berkt\documents\visual studio 2015\Projects\CS408_Project_Client\CS408_Project_Client\obj\Debug\CS408_Project_Client.exe
 c:\users\berkt\documents\visual studio 2015\Projects\CS408_Project_Client\CS408_Project_Client\obj\Debug\CS408_Project_Client.pdb
+C:\Users\MEHMET\Desktop\Klasörlerim\CS408\Proje Part1\CS408_SocialNetworkingApplication\CS408_Project_Client\CS408_Project_Client\bin\Debug\CS408_Project_Client.exe.config
+C:\Users\MEHMET\Desktop\Klasörlerim\CS408\Proje Part1\CS408_SocialNetworkingApplication\CS408_Project_Client\CS408_Project_Client\obj\Debug\CS408_Project_Client.exe
+C:\Users\MEHMET\Desktop\Klasörlerim\CS408\Proje Part1\CS408_SocialNetworkingApplication\CS408_Project_Client\CS408_Project_Client\obj\Debug\CS408_Project_Client.pdb
+C:\Users\MEHMET\Desktop\Klasörlerim\CS408\Proje Part1\CS408_SocialNetworkingApplication\CS408_Project_Client\CS408_Project_Client\bin\Debug\CS408_Project_Client.exe
+C:\Users\MEHMET\Desktop\Klasörlerim\CS408\Proje Part1\CS408_SocialNetworkingApplication\CS408_Project_Client\CS408_Project_Client\bin\Debug\CS408_Project_Client.pdb
+C:\Users\MEHMET\Desktop\Klasörlerim\CS408\Proje Part1\CS408_SocialNetworkingApplication\CS408_Project_Client\CS408_Project_Client\obj\Debug\CS408_Project_Client.csprojResolveAssemblyReference.cache
+C:\Users\MEHMET\Desktop\Klasörlerim\CS408\Proje Part1\CS408_SocialNetworkingApplication\CS408_Project_Client\CS408_Project_Client\obj\Debug\CS408_Project_Client.Form1.resources
+C:\Users\MEHMET\Desktop\Klasörlerim\CS408\Proje Part1\CS408_SocialNetworkingApplication\CS408_Project_Client\CS408_Project_Client\obj\Debug\CS408_Project_Client.Properties.Resources.resources
+C:\Users\MEHMET\Desktop\Klasörlerim\CS408\Proje Part1\CS408_SocialNetworkingApplication\CS408_Project_Client\CS408_Project_Client\obj\Debug\CS408_Project_Client.csproj.GenerateResource.Cache

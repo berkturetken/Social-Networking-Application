@@ -37,7 +37,7 @@ namespace CS408_Project_Client
             {
                 try
                 {
-                    clientSocket.Connect(userName, portNum);
+                    clientSocket.Connect(IP, portNum);
                     //??? Without entering an IP, we can still connect to the server. What is the reason?
                     button_connect.Enabled = false;
                     textBox_message.Enabled = true;
