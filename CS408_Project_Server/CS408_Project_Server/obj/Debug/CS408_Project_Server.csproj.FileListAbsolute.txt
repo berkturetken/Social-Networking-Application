@@ -1,0 +1,9 @@
+c:\users\berkt\documents\visual studio 2015\Projects\CS408_Project_Server\CS408_Project_Server\bin\Debug\CS408_Project_Server.exe.config
+c:\users\berkt\documents\visual studio 2015\Projects\CS408_Project_Server\CS408_Project_Server\bin\Debug\CS408_Project_Server.exe
+c:\users\berkt\documents\visual studio 2015\Projects\CS408_Project_Server\CS408_Project_Server\bin\Debug\CS408_Project_Server.pdb
+c:\users\berkt\documents\visual studio 2015\Projects\CS408_Project_Server\CS408_Project_Server\obj\Debug\CS408_Project_Server.Form1.resources
+c:\users\berkt\documents\visual studio 2015\Projects\CS408_Project_Server\CS408_Project_Server\obj\Debug\CS408_Project_Server.Properties.Resources.resources
+c:\users\berkt\documents\visual studio 2015\Projects\CS408_Project_Server\CS408_Project_Server\obj\Debug\CS408_Project_Server.csproj.GenerateResource.Cache
+c:\users\berkt\documents\visual studio 2015\Projects\CS408_Project_Server\CS408_Project_Server\obj\Debug\CS408_Project_Server.exe
+c:\users\berkt\documents\visual studio 2015\Projects\CS408_Project_Server\CS408_Project_Server\obj\Debug\CS408_Project_Server.pdb
+c:\users\berkt\documents\visual studio 2015\Projects\CS408_Project_Server\CS408_Project_Server\obj\Debug\CS408_Project_Server.csprojResolveAssemblyReference.cache
