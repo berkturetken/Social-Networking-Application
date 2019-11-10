@@ -39,6 +39,7 @@
             this.button_send = new System.Windows.Forms.Button();
             this.name = new System.Windows.Forms.Label();
             this.textBox_name = new System.Windows.Forms.TextBox();
+            this.button_disconnect = new System.Windows.Forms.Button();
             this.SuspendLayout();
             // 
             // ip
@@ -54,7 +55,7 @@
             // textBox_ip
             // 
             this.textBox_ip.Location = new System.Drawing.Point(77, 51);
-            this.textBox_ip.Margin = new System.Windows.Forms.Padding(2, 2, 2, 2);
+            this.textBox_ip.Margin = new System.Windows.Forms.Padding(2);
             this.textBox_ip.Name = "textBox_ip";
             this.textBox_ip.Size = new System.Drawing.Size(97, 20);
             this.textBox_ip.TabIndex = 1;
@@ -72,7 +73,7 @@
             // textBox_port
             // 
             this.textBox_port.Location = new System.Drawing.Point(77, 90);
-            this.textBox_port.Margin = new System.Windows.Forms.Padding(2, 2, 2, 2);
+            this.textBox_port.Margin = new System.Windows.Forms.Padding(2);
             this.textBox_port.Name = "textBox_port";
             this.textBox_port.Size = new System.Drawing.Size(97, 20);
             this.textBox_port.TabIndex = 3;
@@ -80,7 +81,7 @@
             // logs
             // 
             this.logs.Location = new System.Drawing.Point(237, 53);
-            this.logs.Margin = new System.Windows.Forms.Padding(2, 2, 2, 2);
+            this.logs.Margin = new System.Windows.Forms.Padding(2);
             this.logs.Name = "logs";
             this.logs.Size = new System.Drawing.Size(191, 285);
             this.logs.TabIndex = 4;
@@ -89,9 +90,9 @@
             // button_connect
             // 
             this.button_connect.Location = new System.Drawing.Point(77, 163);
-            this.button_connect.Margin = new System.Windows.Forms.Padding(2, 2, 2, 2);
+            this.button_connect.Margin = new System.Windows.Forms.Padding(2);
             this.button_connect.Name = "button_connect";
-            this.button_connect.Size = new System.Drawing.Size(56, 19);
+            this.button_connect.Size = new System.Drawing.Size(56, 25);
             this.button_connect.TabIndex = 5;
             this.button_connect.Text = "Connect";
             this.button_connect.UseVisualStyleBackColor = true;
@@ -100,7 +101,7 @@
             // textBox_message
             // 
             this.textBox_message.Location = new System.Drawing.Point(77, 249);
-            this.textBox_message.Margin = new System.Windows.Forms.Padding(2, 2, 2, 2);
+            this.textBox_message.Margin = new System.Windows.Forms.Padding(2);
             this.textBox_message.Name = "textBox_message";
             this.textBox_message.Size = new System.Drawing.Size(76, 20);
             this.textBox_message.TabIndex = 6;
@@ -118,7 +119,7 @@
             // button_send
             // 
             this.button_send.Location = new System.Drawing.Point(168, 248);
-            this.button_send.Margin = new System.Windows.Forms.Padding(2, 2, 2, 2);
+            this.button_send.Margin = new System.Windows.Forms.Padding(2);
             this.button_send.Name = "button_send";
             this.button_send.Size = new System.Drawing.Size(56, 19);
             this.button_send.TabIndex = 8;
@@ -142,11 +143,23 @@
             this.textBox_name.Size = new System.Drawing.Size(100, 20);
             this.textBox_name.TabIndex = 10;
             // 
+            // button_disconnect
+            // 
+            this.button_disconnect.Enabled = false;
+            this.button_disconnect.Location = new System.Drawing.Point(139, 163);
+            this.button_disconnect.Name = "button_disconnect";
+            this.button_disconnect.Size = new System.Drawing.Size(71, 25);
+            this.button_disconnect.TabIndex = 11;
+            this.button_disconnect.Text = "Disconnect";
+            this.button_disconnect.UseVisualStyleBackColor = true;
+            this.button_disconnect.Click += new System.EventHandler(this.button_disconnect_Click);
+            // 
             // Form1
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
             this.ClientSize = new System.Drawing.Size(447, 384);
+            this.Controls.Add(this.button_disconnect);
             this.Controls.Add(this.textBox_name);
             this.Controls.Add(this.name);
             this.Controls.Add(this.button_send);
@@ -158,7 +171,7 @@
             this.Controls.Add(this.Port);
             this.Controls.Add(this.textBox_ip);
             this.Controls.Add(this.ip);
-            this.Margin = new System.Windows.Forms.Padding(2, 2, 2, 2);
+            this.Margin = new System.Windows.Forms.Padding(2);
             this.Name = "Form1";
             this.Text = "Client";
             this.ResumeLayout(false);
@@ -179,6 +192,7 @@
         private System.Windows.Forms.Button button_send;
         private System.Windows.Forms.Label name;
         private System.Windows.Forms.TextBox textBox_name;
+        private System.Windows.Forms.Button button_disconnect;
     }
 }
 

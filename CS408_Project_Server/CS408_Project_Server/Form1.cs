@@ -12,6 +12,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using System.Windows.Forms;
 
+
 namespace CS408_Project_Server
 {
 
@@ -20,7 +21,7 @@ namespace CS408_Project_Server
         Socket serverSocket = new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp);
         List<Socket> clientSockets = new List<Socket>();
         Dictionary<Socket,string> connectedUsers = new Dictionary<Socket,string>();
-        List<String> userDatabase = new List<string>();
+        List<string> userDatabase = new List<string>();
 
         bool terminating = false;
         bool listening = false;
@@ -34,19 +35,28 @@ namespace CS408_Project_Server
             InitializeComponent();
             //logs.AppendText("Hey"); //For debugging purposes
         }
-
+        //Creating database for clients
         private void create_db()
         {
-            using (StreamReader reader = new StreamReader(@"C:\Users\MEHMET\Desktop\user_db.txt"))
+            try
             {
-                string line;
-                while ((line = reader.ReadLine()) != null)
+                using (StreamReader reader = new StreamReader("C:\\Users\\MEHMET\\Desktop\\Klasörlerim\\CS408\\Proje Part1\\CS408_SocialNetworkingApplication\\CS408_Project_Server\\CS408_Project_Server\\user_db.txt"))
                 {
 
-                    userDatabase.Add(line);
-                    // here is up to you how to find the control to set and to assign the value.
+                    string line;
+                    while ((line = reader.ReadLine()) != null)
+                    {
+
+                        userDatabase.Add(line);
+                        // here is up to you how to find the control to set and to assign the value.
+                    }
                 }
             }
+            catch
+            {
+                Console.WriteLine("Database can not be found!");
+            }
+
         }
 
         private void button_listen_Click(object sender, EventArgs e)
@@ -75,7 +85,7 @@ namespace CS408_Project_Server
                 logs.AppendText("Please check port number \n");
             }
         }
-
+        //Accepting Connections
         private void Accept()
         {
 
@@ -85,8 +95,6 @@ namespace CS408_Project_Server
                 {
                     Socket newClient = serverSocket.Accept();
                     clientSockets.Add(newClient);
-                    
-                   
 
                     Thread receiveName = new Thread(ReceiveName);
                     receiveName.Start();
@@ -104,7 +112,7 @@ namespace CS408_Project_Server
                 }
             }
         }
-
+        //Recieving a name from clients and checking if they are authorized to connect
         private void ReceiveName()
         {
             Socket thisClient = clientSockets[clientSockets.Count() - 1];
@@ -119,6 +127,10 @@ namespace CS408_Project_Server
 
                 if(userDatabase.Contains(username)&& !connectedUsers.ContainsValue(username))
                 {
+                    string message = "Successful";
+                    Byte[] buffer2 = new Byte[64];
+                    buffer = Encoding.Default.GetBytes(message);
+                    thisClient.Send(buffer);
                     connectedUsers.Add(thisClient, username);
                     logs.AppendText(username+" is connected.\n");
                     Thread receiveThread = new Thread(Receive);
@@ -131,7 +143,7 @@ namespace CS408_Project_Server
                     buffer = Encoding.Default.GetBytes(message);
                     thisClient.Send(buffer);
                     clientSockets.Remove(thisClient);
-                    logs.AppendText(username + " is already connected or not in database");
+                    logs.AppendText(username + " is already connected or not in database\n");
 
                 }
                   
@@ -150,7 +162,7 @@ namespace CS408_Project_Server
                 }
             
         }
-        
+        //Recieving meesages from clients
         private void Receive()
         {
             Socket thisClient = clientSockets[clientSockets.Count() - 1];
@@ -160,12 +172,26 @@ namespace CS408_Project_Server
             {
                 try
                 {
-                    Byte[] buffer = new Byte[64];
-                    thisClient.Receive(buffer);
+                    Byte[] Incomingbuffer = new Byte[64];
+                    thisClient.Receive(Incomingbuffer);
 
-                    string incomingMessage = Encoding.Default.GetString(buffer);
+                    string incomingMessage = Encoding.Default.GetString(Incomingbuffer);
                     incomingMessage = incomingMessage.Substring(0, incomingMessage.IndexOf("\0"));
-                    logs.AppendText("Client: " + incomingMessage + "\n");
+                    string outgoingMessage = connectedUsers[thisClient] + ": " + incomingMessage + "\n";
+                    Byte[] Outgoingbuffer = new Byte[64];
+                    Outgoingbuffer = Encoding.Default.GetBytes(outgoingMessage);
+                    logs.AppendText("Recieved a message from " + connectedUsers[thisClient] + " \n");
+                    
+                    foreach (Socket client in connectedUsers.Keys) {
+                        if (client == thisClient)
+                            continue;
+                        client.Send(Outgoingbuffer);
+
+                    }
+
+                    logs.AppendText("Sent it to the other clients!\n");
+
+
 
                 }
                 catch
@@ -173,7 +199,7 @@ namespace CS408_Project_Server
                     //Connection has lost...
                     if(!terminating)
                     {
-                        logs.AppendText("A client has disconnected\n");
+                        logs.AppendText(connectedUsers[thisClient]+" has disconnected\n");
                     }
                     thisClient.Close();
                     clientSockets.Remove(thisClient);
@@ -183,6 +209,7 @@ namespace CS408_Project_Server
             }
         }
 
+   
 
         public void Form1_FormClosing(object Sender, System.ComponentModel.CancelEventArgs e)
         {
