@@ -45,7 +45,6 @@ namespace CS408_Project_Client
                     Thread sendUserName = new Thread(send_name);
                     sendUserName.Start();
 
-
                     Thread receiveApproval = new Thread(RecieveApproval);
                     receiveApproval.Start();
                 }
@@ -60,12 +59,8 @@ namespace CS408_Project_Client
             }
         }
 
-
-
         private void RecieveApproval()
         {
-
-
             try
             {
                 Byte[] buffer = new Byte[64];
@@ -75,10 +70,9 @@ namespace CS408_Project_Client
                 incomingMessage = incomingMessage.Substring(0, incomingMessage.IndexOf("\0"));
                 if (incomingMessage == "NotSuccessful")
                 {
-                    logs.AppendText("You are already connected or not registered\n");
+                    logs.AppendText("You are already connected or not registered! \n");
                     serverSocket.Close();
                     connected = false;
-
                 }
                 else
                 {
@@ -104,8 +98,6 @@ namespace CS408_Project_Client
                 }
                 serverSocket.Close();
             }
-
-
         }
 
         private void recieve()
@@ -120,7 +112,6 @@ namespace CS408_Project_Client
                     string incomingMessage = Encoding.Default.GetString(Incomingbuffer);
                     incomingMessage = incomingMessage.Substring(0, incomingMessage.IndexOf("\0"));
                     logs.AppendText(incomingMessage );
-
                 }
                 catch
                 {
@@ -151,7 +142,6 @@ namespace CS408_Project_Client
                 Byte[] buffer = new Byte[64];
                 buffer = Encoding.Default.GetBytes(username);
                 serverSocket.Send(buffer);
-
             }
         }
 
@@ -161,7 +151,8 @@ namespace CS408_Project_Client
             string message = textBox_message.Text;
 
             //For simplicity, the length of the message should be smaller than 64 characters
-            if (message != "" && message.Length <= 64)
+            //serverSocket should be connected to proceed...
+            if (message != "" && message.Length <= 64 && serverSocket.Connected)
             {
                 //logs.AppendText("Sending the message...\n"); //for debugging purposes
                 logs.AppendText("Me:" + message + "\n");
@@ -169,6 +160,10 @@ namespace CS408_Project_Client
                 buffer = Encoding.Default.GetBytes(message);
                 serverSocket.Send(buffer);
                 textBox_message.Clear();    //Clearing the textbox for the new usage
+            }
+            else
+            {
+                logs.AppendText("The connection has lost with the server! \n");
             }
         }
 

@@ -20,12 +20,12 @@ namespace CS408_Project_Server
     {
         Socket serverSocket = new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp);
         List<Socket> clientSockets = new List<Socket>();
-        Dictionary<Socket,string> connectedUsers = new Dictionary<Socket,string>();
+        Dictionary<Socket, string> connectedUsers = new Dictionary<Socket, string>();
         List<string> userDatabase = new List<string>();
 
         bool terminating = false;
         bool listening = false;
-                                   
+
 
         public Form1()
         {
@@ -35,18 +35,21 @@ namespace CS408_Project_Server
             InitializeComponent();
             //logs.AppendText("Hey"); //For debugging purposes
         }
+
         //Creating database for clients
         private void create_db()
         {
             try
             {
-                using (StreamReader reader = new StreamReader("C:\\Users\\MEHMET\\Desktop\\Klasörlerim\\CS408\\Proje Part1\\CS408_SocialNetworkingApplication\\CS408_Project_Server\\CS408_Project_Server\\user_db.txt"))
-                {
+                //Getting the current path of project in any local machine...
+                var path = System.IO.Path.GetDirectoryName(Application.ExecutablePath);
+                path = path.Substring(0, path.Length - 9) + "user_db.txt";  //get rid of the "bin/debug" part
 
+                using (StreamReader reader = new StreamReader(path))
+                {
                     string line;
                     while ((line = reader.ReadLine()) != null)
                     {
-
                         userDatabase.Add(line);
                         // here is up to you how to find the control to set and to assign the value.
                     }
@@ -56,7 +59,6 @@ namespace CS408_Project_Server
             {
                 Console.WriteLine("Database can not be found!");
             }
-
         }
 
         private void button_listen_Click(object sender, EventArgs e)
@@ -65,7 +67,9 @@ namespace CS408_Project_Server
 
             //Converts the string representation of a number to its 32-bit signed integer equivalent.
             //A return value indicates whether the operation succeeded.
-            if (Int32.TryParse(textBox_port.Text, out serverPort))
+
+            //Port numbers range from 0 to 65535! Not to get exception, added serverPort > -1
+            if (Int32.TryParse(textBox_port.Text, out serverPort) && serverPort > -1)
             {
                 IPEndPoint endPoint = new IPEndPoint(IPAddress.Any, serverPort);
                 serverSocket.Bind(endPoint);
@@ -82,14 +86,13 @@ namespace CS408_Project_Server
             }
             else
             {
-                logs.AppendText("Please check port number \n");
+                logs.AppendText("Please check port number! \n");
             }
         }
         //Accepting Connections
         private void Accept()
         {
-
-            while(listening)
+            while (listening)
             {
                 try
                 {
@@ -101,7 +104,7 @@ namespace CS408_Project_Server
                 }
                 catch
                 {
-                    if(terminating)
+                    if (terminating)
                     {
                         listening = false;
                     }
@@ -116,23 +119,23 @@ namespace CS408_Project_Server
         private void ReceiveName()
         {
             Socket thisClient = clientSockets[clientSockets.Count() - 1];
-            
-                try
-                {
-                    Byte[] buffer = new Byte[64];
-                    thisClient.Receive(buffer);
 
-                    string username = Encoding.Default.GetString(buffer);
-                    username = username.Substring(0, username.IndexOf("\0"));
+            try
+            {
+                Byte[] buffer = new Byte[64];
+                thisClient.Receive(buffer);
 
-                if(userDatabase.Contains(username)&& !connectedUsers.ContainsValue(username))
+                string username = Encoding.Default.GetString(buffer);
+                username = username.Substring(0, username.IndexOf("\0"));
+
+                if (userDatabase.Contains(username) && !connectedUsers.ContainsValue(username))
                 {
                     string message = "Successful";
                     Byte[] buffer2 = new Byte[64];
                     buffer = Encoding.Default.GetBytes(message);
                     thisClient.Send(buffer);
                     connectedUsers.Add(thisClient, username);
-                    logs.AppendText(username+" is connected.\n");
+                    logs.AppendText(username + " is connected.\n");
                     Thread receiveThread = new Thread(Receive);
                     receiveThread.Start();
                 }
@@ -143,24 +146,29 @@ namespace CS408_Project_Server
                     buffer = Encoding.Default.GetBytes(message);
                     thisClient.Send(buffer);
                     clientSockets.Remove(thisClient);
-                    logs.AppendText(username + " is already connected or not in database\n");
 
-                }
-                  
-
-                }
-                catch
-                {
-                    //Connection has lost...
-                    if (!terminating)
+                    //Differentiate the outputs of "already connected" case and "not in database" case...
+                    if(!connectedUsers.ContainsValue(username))
                     {
-                        logs.AppendText("A client has disconnected\n");
+                        logs.AppendText("There is no such a person! \n");
                     }
-                    thisClient.Close();
-                    clientSockets.Remove(thisClient);
-                  
+                    else
+                    {
+                        logs.AppendText(username + " is already connected! \n");
+                    }
+
                 }
-            
+            }
+            catch
+            {
+                //Connection has lost...
+                if (!terminating)
+                {
+                    logs.AppendText("A client has disconnected! \n");
+                }
+                thisClient.Close();
+                clientSockets.Remove(thisClient);
+            }
         }
         //Recieving meesages from clients
         private void Receive()
@@ -168,7 +176,7 @@ namespace CS408_Project_Server
             Socket thisClient = clientSockets[clientSockets.Count() - 1];
             bool connected = true;
 
-            while(connected && !terminating)
+            while (connected && !terminating)
             {
                 try
                 {
@@ -181,8 +189,9 @@ namespace CS408_Project_Server
                     Byte[] Outgoingbuffer = new Byte[64];
                     Outgoingbuffer = Encoding.Default.GetBytes(outgoingMessage);
                     logs.AppendText("Recieved a message from " + connectedUsers[thisClient] + " \n");
-                    
-                    foreach (Socket client in connectedUsers.Keys) {
+
+                    foreach (Socket client in connectedUsers.Keys)
+                    {
                         if (client == thisClient)
                             continue;
                         client.Send(Outgoingbuffer);
@@ -190,16 +199,13 @@ namespace CS408_Project_Server
                     }
 
                     logs.AppendText("Sent it to the other clients!\n");
-
-
-
                 }
                 catch
                 {
                     //Connection has lost...
-                    if(!terminating)
+                    if (!terminating)
                     {
-                        logs.AppendText(connectedUsers[thisClient]+" has disconnected\n");
+                        logs.AppendText(connectedUsers[thisClient] + " has disconnected! \n");
                     }
                     thisClient.Close();
                     clientSockets.Remove(thisClient);
@@ -209,14 +215,11 @@ namespace CS408_Project_Server
             }
         }
 
-   
-
         public void Form1_FormClosing(object Sender, System.ComponentModel.CancelEventArgs e)
         {
             listening = false;
             terminating = false;
             Environment.Exit(0);    //exit safely
         }
-
     }
 }
