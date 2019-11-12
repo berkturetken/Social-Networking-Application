@@ -1,21 +1,16 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.ComponentModel;
-using System.Data;
-using System.Drawing;
 using System.IO;
 using System.Linq;
 using System.Net;
 using System.Net.Sockets;
 using System.Text;
 using System.Threading;
-using System.Threading.Tasks;
 using System.Windows.Forms;
 
 
 namespace CS408_Project_Server
 {
-
     public partial class Form1 : Form
     {
         Socket serverSocket = new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp);
@@ -26,14 +21,15 @@ namespace CS408_Project_Server
         bool terminating = false;
         bool listening = false;
 
-
         public Form1()
         {
             create_db();
             Control.CheckForIllegalCrossThreadCalls = false;
             this.FormClosing += new FormClosingEventHandler(Form1_FormClosing);
             InitializeComponent();
-            //logs.AppendText("Hey"); //For debugging purposes
+
+            //Prevent to write the logs console
+            logs.ReadOnly = true;
         }
 
         //Creating database for clients
@@ -41,18 +37,17 @@ namespace CS408_Project_Server
         {
             try
             {
-                //Getting the current path of project in any local machine...
+                //Get the current path of project in any local machine...
                 var path = System.IO.Path.GetDirectoryName(Application.ExecutablePath);
-                path = path.Substring(0, path.Length - 9) + "user_db.txt";  //get rid of the "bin/debug" part
+                //Get rid of the "bin/debug" part in path and add our database file (user_db.txt) to the path
+                path = path.Substring(0, path.Length - 9) + "user_db.txt";  
 
                 using (StreamReader reader = new StreamReader(path))
                 {
                     string line;
                     while ((line = reader.ReadLine()) != null)
-                    {
                         userDatabase.Add(line);
                         // here is up to you how to find the control to set and to assign the value.
-                    }
                 }
             }
             catch
@@ -73,7 +68,7 @@ namespace CS408_Project_Server
             {
                 IPEndPoint endPoint = new IPEndPoint(IPAddress.Any, serverPort);
                 serverSocket.Bind(endPoint);
-                serverSocket.Listen(3);     //why?
+                serverSocket.Listen(3);         //why?
 
                 //The server is getting ready to listen...
                 listening = true;
@@ -105,16 +100,13 @@ namespace CS408_Project_Server
                 catch
                 {
                     if (terminating)
-                    {
                         listening = false;
-                    }
                     else
-                    {
                         logs.AppendText("The socket stopped working.\n");
-                    }
                 }
             }
         }
+
         //Recieving a name from clients and checking if they are authorized to connect
         private void ReceiveName()
         {
@@ -128,6 +120,9 @@ namespace CS408_Project_Server
                 string username = Encoding.Default.GetString(buffer);
                 username = username.Substring(0, username.IndexOf("\0"));
 
+                //If the username is in the database, then send a "Successful" message to the client, 
+                //add the user to the connectedUsers dictionary, log as "connected", and 
+                //ready to transfer his/her message to other clients.
                 if (userDatabase.Contains(username) && !connectedUsers.ContainsValue(username))
                 {
                     string message = "Successful";
@@ -139,6 +134,11 @@ namespace CS408_Project_Server
                     Thread receiveThread = new Thread(Receive);
                     receiveThread.Start();
                 }
+
+                //If the username is already in the database or not in the database, 
+                //then send a "NotSuccessful" message to the client,
+                //remove from the clientSockets and log appropriate messages whether
+                //the client is already connected or not in the database
                 else
                 {
                     string message = "NotSuccessful";
@@ -149,27 +149,22 @@ namespace CS408_Project_Server
 
                     //Differentiate the outputs of "already connected" case and "not in database" case...
                     if(!connectedUsers.ContainsValue(username))
-                    {
                         logs.AppendText("There is no such a person! \n");
-                    }
                     else
-                    {
                         logs.AppendText(username + " is already connected! \n");
-                    }
-
                 }
             }
             catch
             {
                 //Connection has lost...
                 if (!terminating)
-                {
                     logs.AppendText("A client has disconnected! \n");
-                }
+
                 thisClient.Close();
                 clientSockets.Remove(thisClient);
             }
         }
+
         //Recieving meesages from clients
         private void Receive()
         {
@@ -185,9 +180,11 @@ namespace CS408_Project_Server
 
                     string incomingMessage = Encoding.Default.GetString(Incomingbuffer);
                     incomingMessage = incomingMessage.Substring(0, incomingMessage.IndexOf("\0"));
+
                     string outgoingMessage = connectedUsers[thisClient] + ": " + incomingMessage + "\n";
                     Byte[] Outgoingbuffer = new Byte[64];
                     Outgoingbuffer = Encoding.Default.GetBytes(outgoingMessage);
+
                     logs.AppendText("Recieved a message from " + connectedUsers[thisClient] + " \n");
 
                     foreach (Socket client in connectedUsers.Keys)
@@ -195,7 +192,6 @@ namespace CS408_Project_Server
                         if (client == thisClient)
                             continue;
                         client.Send(Outgoingbuffer);
-
                     }
 
                     logs.AppendText("Sent it to the other clients!\n");
@@ -206,6 +202,18 @@ namespace CS408_Project_Server
                     if (!terminating)
                     {
                         logs.AppendText(connectedUsers[thisClient] + " has disconnected! \n");
+                        
+                        //If the client terminates the connection, the other clients have to understand the disconnection
+                        string outgoingMessage = connectedUsers[thisClient] + " has disconnected\n";
+                        Byte[] Outgoingbuffer = new Byte[64];
+                        Outgoingbuffer = Encoding.Default.GetBytes(outgoingMessage);
+
+                        foreach (Socket client in connectedUsers.Keys)
+                        {
+                            if (client == thisClient)
+                                continue;
+                            client.Send(Outgoingbuffer);
+                        }
                     }
                     thisClient.Close();
                     clientSockets.Remove(thisClient);
@@ -219,7 +227,7 @@ namespace CS408_Project_Server
         {
             listening = false;
             terminating = false;
-            Environment.Exit(0);    //exit safely
+            Environment.Exit(0);    //Exit safely...
         }
     }
 }
