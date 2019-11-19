@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Net;
 using System.Net.Sockets;
 using System.Text;
 using System.Threading;
@@ -34,24 +35,39 @@ namespace CS408_Project_Client
             string IP = textBox_ip.Text;
             int portNum;
 
+            //Get the local IP Address
+            string currIP = "";
+            var host = Dns.GetHostEntry(Dns.GetHostName());
+            foreach (var ip in host.AddressList)
+            {
+                if (ip.AddressFamily == AddressFamily.InterNetwork)
+                    currIP = ip.ToString();                         //Since type of "ip" is System.Net.IPAddress, there must be conversions
+            }
+
+            //First, check the port (actually, we're only checking the conversion from string to integer!)
             if (Int32.TryParse(textBox_port.Text, out portNum))
             {
-                try
+                //Second, check the IP address
+                if (IP == currIP)
                 {
-                    //Without entering an IP, we can still connect to the server. What is the reason?
-                    serverSocket.Connect(IP, portNum);
-                    connected = true;
+                    try
+                    {
+                        serverSocket.Connect(IP, portNum);
+                        connected = true;
 
-                    Thread sendUserName = new Thread(send_name);
-                    sendUserName.Start();
+                        Thread sendUserName = new Thread(send_name);
+                        sendUserName.Start();
 
-                    Thread receiveApproval = new Thread(RecieveApproval);
-                    receiveApproval.Start();
+                        Thread receiveApproval = new Thread(RecieveApproval);
+                        receiveApproval.Start();
+                    }
+                    catch
+                    {
+                        logs.AppendText("Could not connect to the server!\n");
+                    }
                 }
-                catch
-                {
-                    logs.AppendText("Could not connect to the server!\n");
-                }
+                else
+                    logs.AppendText("Check your IP address!\n");
             }
             else
                 logs.AppendText("Check the port!\n");
@@ -62,7 +78,7 @@ namespace CS408_Project_Client
         {
             try
             {
-                Byte[] buffer = new Byte[64];
+                Byte[] buffer = new Byte[128];
                 serverSocket.Receive(buffer);
 
                 string incomingMessage = Encoding.Default.GetString(buffer);
@@ -116,7 +132,7 @@ namespace CS408_Project_Client
             {
                 try
                 {
-                    Byte[] Incomingbuffer = new Byte[64];
+                    Byte[] Incomingbuffer = new Byte[128];
                     serverSocket.Receive(Incomingbuffer);
 
                     string incomingMessage = Encoding.Default.GetString(Incomingbuffer);
@@ -139,7 +155,7 @@ namespace CS408_Project_Client
                 }
             }
         }
-        
+
         //Sending name to be checked by the server
         private void send_name()
         {
@@ -159,13 +175,18 @@ namespace CS408_Project_Client
 
             //For simplicity, the length of the message should be smaller than 64 characters
             //serverSocket should be connected to proceed...
-            if (message != "" && message.Length <= 64 && serverSocket.Connected)
+            if (serverSocket.Connected)
             {
-                logs.AppendText("Me:" + message + "\n");
-                Byte[] buffer = new Byte[64];
-                buffer = Encoding.Default.GetBytes(message);
-                serverSocket.Send(buffer);
-                textBox_message.Clear();        //Clearing the textbox for the new usage
+                if (message != "" && message.Length <= 128)
+                {
+                    logs.AppendText("Me:" + message + "\n");
+                    Byte[] buffer = new Byte[128];
+                    buffer = Encoding.Default.GetBytes(message);
+                    serverSocket.Send(buffer);
+                    textBox_message.Clear();        //Clearing the textbox for the new usage
+                }
+                else
+                    logs.AppendText("Text must be less than or equal to 128 characters! \n");
             }
             else
                 logs.AppendText("The connection has lost with the server! \n");

@@ -114,7 +114,7 @@ namespace CS408_Project_Server
 
             try
             {
-                Byte[] buffer = new Byte[64];
+                Byte[] buffer = new Byte[128];
                 thisClient.Receive(buffer);
 
                 string username = Encoding.Default.GetString(buffer);
@@ -126,7 +126,7 @@ namespace CS408_Project_Server
                 if (userDatabase.Contains(username) && !connectedUsers.ContainsValue(username))
                 {
                     string message = "Successful";
-                    Byte[] buffer2 = new Byte[64];
+                    Byte[] buffer2 = new Byte[128];
                     buffer = Encoding.Default.GetBytes(message);
                     thisClient.Send(buffer);
                     connectedUsers.Add(thisClient, username);
@@ -142,7 +142,7 @@ namespace CS408_Project_Server
                 else
                 {
                     string message = "NotSuccessful";
-                    Byte[] buffer2 = new Byte[64];
+                    Byte[] buffer2 = new Byte[128];
                     buffer = Encoding.Default.GetBytes(message);
                     thisClient.Send(buffer);
                     clientSockets.Remove(thisClient);
@@ -175,14 +175,14 @@ namespace CS408_Project_Server
             {
                 try
                 {
-                    Byte[] Incomingbuffer = new Byte[64];
+                    Byte[] Incomingbuffer = new Byte[128];
                     thisClient.Receive(Incomingbuffer);
 
                     string incomingMessage = Encoding.Default.GetString(Incomingbuffer);
                     incomingMessage = incomingMessage.Substring(0, incomingMessage.IndexOf("\0"));
 
                     string outgoingMessage = connectedUsers[thisClient] + ": " + incomingMessage + "\n";
-                    Byte[] Outgoingbuffer = new Byte[64];
+                    Byte[] Outgoingbuffer = new Byte[128];
                     Outgoingbuffer = Encoding.Default.GetBytes(outgoingMessage);
 
                     logs.AppendText("Recieved a message from " + connectedUsers[thisClient] + " \n");
@@ -193,8 +193,13 @@ namespace CS408_Project_Server
                             continue;
                         client.Send(Outgoingbuffer);
                     }
+                    
+                    //The server still sends the message although there is only one user 
 
-                    logs.AppendText("Sent it to the other clients!\n");
+                    if (connectedUsers.Count == 1)
+                        logs.AppendText("No other user to send message in the server right now! \n");
+                    else
+                        logs.AppendText("Sent it to the other clients!\n");
                 }
                 catch
                 {
@@ -205,7 +210,7 @@ namespace CS408_Project_Server
                         
                         //If the client terminates the connection, the other clients have to understand the disconnection
                         string outgoingMessage = connectedUsers[thisClient] + " has disconnected\n";
-                        Byte[] Outgoingbuffer = new Byte[64];
+                        Byte[] Outgoingbuffer = new Byte[128];
                         Outgoingbuffer = Encoding.Default.GetBytes(outgoingMessage);
 
                         foreach (Socket client in connectedUsers.Keys)
