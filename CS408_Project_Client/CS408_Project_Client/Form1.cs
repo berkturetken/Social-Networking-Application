@@ -10,6 +10,9 @@ namespace CS408_Project_Client
 {
     public partial class Form1 : Form
     {
+        string nameCode = "0";
+        string messageCode = "1";
+        string addFriendCode = "2";
 
         bool terminating = false;
         bool connected = false;
@@ -215,6 +218,39 @@ namespace CS408_Project_Client
             terminating = true;
             connected = false;
             Environment.Exit(0);    //Exit safely...
+        }
+
+        private void button__addFriend_Click(object sender, EventArgs e)
+        {
+            string friendName = addFriendCode;
+            friendName += textBox_friendName.Text;
+
+            if (serverSocket.Connected)
+            {
+                if (friendName != "" && friendName.Length <= 64)
+                {
+                    //logs.AppendText("Me:" + message + "\n");
+                    Byte[] buffer = new Byte[64];
+                    buffer = Encoding.Default.GetBytes(friendName);
+                    serverSocket.Send(buffer);
+                    textBox_message.Clear();        //Clearing the textbox for the new usage
+                }
+                else
+                    logs.AppendText("Text must be less than or equal to 64 characters! \n");
+            }
+            else
+                logs.AppendText("The connection has lost with the server!AAA \n");
+
+
+        }
+
+        private void button_friendRequests_Click(object sender, EventArgs e)
+        {
+
+
+            Form2 form2 = new Form2();
+            form2.Show();
+
         }
     }
 }

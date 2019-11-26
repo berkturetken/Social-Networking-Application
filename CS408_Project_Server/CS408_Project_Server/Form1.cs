@@ -17,6 +17,7 @@ namespace CS408_Project_Server
         List<Socket> clientSockets = new List<Socket>();
         Dictionary<Socket, string> connectedUsers = new Dictionary<Socket, string>();
         List<string> userDatabase = new List<string>();
+        Dictionary<string,List<string>> friendRequests = new Dictionary<string, List<string>>();
 
         bool terminating = false;
         bool listening = false;
@@ -180,26 +181,65 @@ namespace CS408_Project_Server
 
                     string incomingMessage = Encoding.Default.GetString(Incomingbuffer);
                     incomingMessage = incomingMessage.Substring(0, incomingMessage.IndexOf("\0"));
+                    char RequestCode = incomingMessage[0];
+                    incomingMessage = incomingMessage.Substring(1);
 
-                    string outgoingMessage = connectedUsers[thisClient] + ": " + incomingMessage + "\n";
-                    Byte[] Outgoingbuffer = new Byte[128];
-                    Outgoingbuffer = Encoding.Default.GetBytes(outgoingMessage);
-
-                    logs.AppendText("Recieved a message from " + connectedUsers[thisClient] + " \n");
-
-                    foreach (Socket client in connectedUsers.Keys)
+                    if (RequestCode == 0)
                     {
-                        if (client == thisClient)
-                            continue;
-                        client.Send(Outgoingbuffer);
-                    }
-                    
-                    //The server still sends the message although there is only one user 
+                        string outgoingMessage = connectedUsers[thisClient] + ": " + incomingMessage + "\n";
+                        Byte[] Outgoingbuffer = new Byte[128];
+                        Outgoingbuffer = Encoding.Default.GetBytes(outgoingMessage);
 
-                    if (connectedUsers.Count == 1)
-                        logs.AppendText("No other user to send message in the server right now! \n");
-                    else
-                        logs.AppendText("Sent it to the other clients!\n");
+                        logs.AppendText("Recieved a message from " + connectedUsers[thisClient] + " \n");
+
+                        foreach (Socket client in connectedUsers.Keys)
+                        {
+                            if (client == thisClient)
+                                continue;
+                            client.Send(Outgoingbuffer);
+                        }
+
+                        //The server still sends the message although there is only one user 
+
+                        if (connectedUsers.Count == 1)
+                            logs.AppendText("No other user to send message in the server right now! \n");
+                        else
+                            logs.AppendText("Sent it to the other clients!\n");
+                    }
+                    else if (RequestCode == 1)
+                    {
+                        if (userDatabase.Contains(incomingMessage))
+                        {
+                            if (connectedUsers.ContainsValue(incomingMessage))
+                            {
+                                string outgoingMessage = "Recieved a new friend request from: "+ connectedUsers[thisClient];
+                                Byte[] Outgoingbuffer = new Byte[128];
+                                Outgoingbuffer = Encoding.Default.GetBytes(outgoingMessage);
+
+                                foreach (Socket client in connectedUsers.Keys)
+                                {
+                                    if (client == thisClient)
+                                    {
+                                        client.Send(Outgoingbuffer);
+                                        break;
+                                    }
+                                }
+
+
+                            }
+                        }
+                        else
+                        {
+                            string outgoingMessage = "The name is not in database\n";
+                            Byte[] Outgoingbuffer = new Byte[128];
+                            Outgoingbuffer = Encoding.Default.GetBytes(outgoingMessage);
+                            thisClient.Send(Outgoingbuffer);
+                        }
+
+
+                    }
+
+                  
                 }
                 catch
                 {
