@@ -19,6 +19,8 @@ namespace CS408_Project_Server
         List<string> userDatabase = new List<string>();
         Dictionary<string,List<string>> friendRequests = new Dictionary<string, List<string>>();
 
+        
+
         bool terminating = false;
         bool listening = false;
 
@@ -41,13 +43,16 @@ namespace CS408_Project_Server
                 //Get the current path of project in any local machine...
                 var path = System.IO.Path.GetDirectoryName(Application.ExecutablePath);
                 //Get rid of the "bin/debug" part in path and add our database file (user_db.txt) to the path
-                path = path.Substring(0, path.Length - 9) + "user_db.txt";  
-
+                path = path.Substring(0, path.Length - 9) + "user_db.txt";
+                List<string> requests = new List<string>();
                 using (StreamReader reader = new StreamReader(path))
                 {
                     string line;
                     while ((line = reader.ReadLine()) != null)
+                    {
                         userDatabase.Add(line);
+                        friendRequests.Add(line, requests);
+                    }
                         // here is up to you how to find the control to set and to assign the value.
                 }
             }
@@ -224,9 +229,10 @@ namespace CS408_Project_Server
                                         break;
                                     }
                                 }
-
-
                             }
+
+                            friendRequests[incomingMessage].Add(connectedUsers[thisClient]);
+
                         }
                         else
                         {
