@@ -100,8 +100,8 @@ namespace CS408_Project_Server
                     Socket newClient = serverSocket.Accept();
                     clientSockets.Add(newClient);
 
-                    Thread receiveName = new Thread(ReceiveName);
-                    receiveName.Start();
+                    Thread RecieveThread = new Thread(Recieve);
+                    RecieveThread.Start();
                 }
                 catch
                 {
@@ -114,12 +114,8 @@ namespace CS408_Project_Server
         }
 
         //Recieving a name from clients and checking if they are authorized to connect
-        private void ReceiveName()
+        private void ReceiveName(Socket thisClient)
         {
-            Socket thisClient = clientSockets[clientSockets.Count() - 1];
-
-            try
-            {
                 Byte[] buffer = new Byte[128];
                 thisClient.Receive(buffer);
 
@@ -137,8 +133,6 @@ namespace CS408_Project_Server
                     thisClient.Send(buffer);
                     connectedUsers.Add(thisClient, username);
                     logs.AppendText(username + " is connected.\n");
-                    Thread receiveThread = new Thread(Receive);
-                    receiveThread.Start();
                 }
 
                 //If the username is already in the database or not in the database, 
@@ -160,19 +154,50 @@ namespace CS408_Project_Server
                         logs.AppendText(username + " is already connected! \n");
                 }
             }
-            catch
-            {
-                //Connection has lost...
-                if (!terminating)
-                    logs.AppendText("A client has disconnected! \n");
+           
+        
 
-                thisClient.Close();
-                clientSockets.Remove(thisClient);
+        private void RecieveMessage(Socket thisClient , string incomingMessage)
+        {
+            string outgoingMessage = connectedUsers[thisClient] + ": " + incomingMessage + "\n";
+            Byte[] Outgoingbuffer = new Byte[128];
+            Outgoingbuffer = Encoding.Default.GetBytes(outgoingMessage);
+
+            logs.AppendText("Recieved a message from " + connectedUsers[thisClient] + " \n");
+
+            foreach (Socket client in connectedUsers.Keys)
+            {
+                if (client == thisClient)
+                    continue;
+                client.Send(Outgoingbuffer);
+            }
+
+            //The server still sends the message although there is only one user 
+
+            if (connectedUsers.Count == 1)
+                logs.AppendText("No other user to send message in the server right now! \n");
+            else
+                logs.AppendText("Sent it to the other clients!\n");
+        }
+
+        private void RecievingFriendRequest(Socket thisClient)
+        {
+            string outgoingMessage = "Recieved a new friend request from: " + connectedUsers[thisClient];
+            Byte[] Outgoingbuffer = new Byte[128];
+            Outgoingbuffer = Encoding.Default.GetBytes(outgoingMessage);
+
+            foreach (Socket client in connectedUsers.Keys)
+            {
+                if (client == thisClient)
+                {
+                    client.Send(Outgoingbuffer);
+                    break;
+                }
             }
         }
 
         //Recieving meesages from clients
-        private void Receive()
+        private void Recieve()
         {
             Socket thisClient = clientSockets[clientSockets.Count() - 1];
             bool connected = true;
@@ -191,44 +216,19 @@ namespace CS408_Project_Server
 
                     if (RequestCode == 0)
                     {
-                        string outgoingMessage = connectedUsers[thisClient] + ": " + incomingMessage + "\n";
-                        Byte[] Outgoingbuffer = new Byte[128];
-                        Outgoingbuffer = Encoding.Default.GetBytes(outgoingMessage);
-
-                        logs.AppendText("Recieved a message from " + connectedUsers[thisClient] + " \n");
-
-                        foreach (Socket client in connectedUsers.Keys)
-                        {
-                            if (client == thisClient)
-                                continue;
-                            client.Send(Outgoingbuffer);
-                        }
-
-                        //The server still sends the message although there is only one user 
-
-                        if (connectedUsers.Count == 1)
-                            logs.AppendText("No other user to send message in the server right now! \n");
-                        else
-                            logs.AppendText("Sent it to the other clients!\n");
+                        ReceiveName(thisClient);
                     }
                     else if (RequestCode == 1)
+                    {
+                        RecieveMessage(thisClient, incomingMessage);
+                    }
+                    else if (RequestCode == 2)
                     {
                         if (userDatabase.Contains(incomingMessage))
                         {
                             if (connectedUsers.ContainsValue(incomingMessage))
                             {
-                                string outgoingMessage = "Recieved a new friend request from: "+ connectedUsers[thisClient];
-                                Byte[] Outgoingbuffer = new Byte[128];
-                                Outgoingbuffer = Encoding.Default.GetBytes(outgoingMessage);
-
-                                foreach (Socket client in connectedUsers.Keys)
-                                {
-                                    if (client == thisClient)
-                                    {
-                                        client.Send(Outgoingbuffer);
-                                        break;
-                                    }
-                                }
+                                RecievingFriendRequest(thisClient);
                             }
 
                             friendRequests[incomingMessage].Add(connectedUsers[thisClient]);
