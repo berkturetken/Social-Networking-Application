@@ -1,10 +1,10 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Net;
 using System.Net.Sockets;
 using System.Text;
 using System.Threading;
 using System.Windows.Forms;
-
 
 namespace CS408_Project_Client
 {
@@ -13,6 +13,13 @@ namespace CS408_Project_Client
         string nameCode = "0";
         string messageCode = "1";
         string addFriendCode = "2";
+        string notificationCode = "3";
+        string readyToGetRequestCode = "4";
+        string username = ""; 
+
+        List<string> pendingFriendRequests = new List<string>();
+        List<string> sentFriendRequests = new List<string>();
+        List<string> myFriends = new List<string>();
 
         bool terminating = false;
         bool connected = false;
@@ -25,9 +32,13 @@ namespace CS408_Project_Client
             this.FormClosing += new FormClosingEventHandler(Form1_FormClosing);
             InitializeComponent();
 
-            //Prevent to click on the "Send" button and write the logs console
+            //INITIAL BUTTON SITUATIONS
             button_send.Enabled = false;
             logs.ReadOnly = true;
+            button_addFriend.Enabled = false;
+            button_accept.Enabled = false;
+            button_reject.Enabled = false;
+
         }
 
         //Building the TCP connection 
@@ -51,15 +62,16 @@ namespace CS408_Project_Client
             if (Int32.TryParse(textBox_port.Text, out portNum))
             {
                 //Second, check the IP address
-                if (IP == currIP)
+                if (IP == currIP || IP == "")
                 {
                     try
                     {
                         serverSocket.Connect(IP, portNum);
                         connected = true;
 
-                        Thread sendUserName = new Thread(send_name);
-                        sendUserName.Start();
+                        /* Thread sendUserName = new Thread(send_name);
+                         sendUserName.Start();*/
+                        send_name();
 
                         Thread receiveApproval = new Thread(RecieveApproval);
                         receiveApproval.Start();
@@ -105,7 +117,15 @@ namespace CS408_Project_Client
                     button_send.Enabled = true;
                     connected = true;
                     button_disconnect.Enabled = true;
+                    button_addFriend.Enabled = true;
+                    button_accept.Enabled = true;
+                    button_reject.Enabled = true;
+
                     logs.AppendText("Connected to the server!\n");
+
+                    Byte[] readyToGetRequestBuffer = new Byte[128];
+                    readyToGetRequestBuffer = Encoding.Default.GetBytes(readyToGetRequestCode);
+                    serverSocket.Send(readyToGetRequestBuffer);
 
                     Thread recieveThread = new Thread(recieve);
                     recieveThread.Start();
@@ -140,7 +160,41 @@ namespace CS408_Project_Client
 
                     string incomingMessage = Encoding.Default.GetString(Incomingbuffer);
                     incomingMessage = incomingMessage.Substring(0, incomingMessage.IndexOf("\0"));
-                    logs.AppendText(incomingMessage);
+
+                    char RequestCode = incomingMessage[0];
+                    incomingMessage = incomingMessage.Substring(1);
+
+                    if (RequestCode == '1')
+                    {
+                        logs.AppendText(incomingMessage);
+                    }
+                    else if (RequestCode == '2')
+                    {
+                        pendingFriendRequests.Add(incomingMessage);
+                        logs.AppendText("Received a new friend request from " + incomingMessage + "\n");
+                        listFriendRequests();
+                    }
+                    else if (RequestCode == '3')
+                    {
+                        if (incomingMessage.Substring(0, 8) == "ACCEPTED")
+                        {
+                            string acceptedFriend = incomingMessage.Substring(8);
+                            myFriends.Add(acceptedFriend);
+                            listMyFriends();
+
+                        }
+
+                        else if (incomingMessage.Substring(0, 8) == "REJECTED") { // burada sıkıntı var
+                            string rejectedFriend = incomingMessage.Substring(8);
+                            sentFriendRequests.Remove(rejectedFriend);
+                            listMyFriends();
+                        } // buraya kadar  // karşı taraf reddedince
+
+                        else
+                        {
+                            logs.AppendText(incomingMessage);
+                        }
+                    }
                 }
                 catch
                 {
@@ -162,19 +216,41 @@ namespace CS408_Project_Client
         //Sending name to be checked by the server
         private void send_name()
         {
-            string username = textBox_name.Text;
+            username = textBox_name.Text;
+            string outgoingMessage = nameCode + username;
 
             if (username != "" && username.Length <= 64)
             {
                 Byte[] buffer = new Byte[64];
-                buffer = Encoding.Default.GetBytes(username);
+                buffer = Encoding.Default.GetBytes(outgoingMessage);
                 serverSocket.Send(buffer);
+            }
+        }
+
+        private void listFriendRequests()
+        {
+            listBox_friendRequests.Items.Clear();
+            foreach (string request in pendingFriendRequests)
+            {
+                if (!listBox_friendRequests.Items.Contains(request))
+                    listBox_friendRequests.Items.Add(request);
+            }
+        }
+
+        private void listMyFriends()
+        {
+            listBox_friendsList.Items.Clear();
+            foreach (string friend in myFriends)
+            {
+                if (!listBox_friendsList.Items.Contains(friend))
+                    listBox_friendsList.Items.Add(friend);
             }
         }
 
         private void button_send_Click(object sender, EventArgs e)
         {
             string message = textBox_message.Text;
+            string outgoingMessage = messageCode + message;
 
             //For simplicity, the length of the message should be smaller than 64 characters
             //serverSocket should be connected to proceed...
@@ -182,9 +258,9 @@ namespace CS408_Project_Client
             {
                 if (message != "" && message.Length <= 128)
                 {
-                    logs.AppendText("Me:" + message + "\n");
+                    logs.AppendText(username + ": " + message + "\n");
                     Byte[] buffer = new Byte[128];
-                    buffer = Encoding.Default.GetBytes(message);
+                    buffer = Encoding.Default.GetBytes(outgoingMessage);
                     serverSocket.Send(buffer);
                     textBox_message.Clear();        //Clearing the textbox for the new usage
                 }
@@ -203,6 +279,9 @@ namespace CS408_Project_Client
                 connected = false;
                 button_connect.Enabled = true;
                 button_disconnect.Enabled = false;
+                button_addFriend.Enabled = false;
+                button_accept.Enabled = false;
+                button_reject.Enabled = false;
 
                 button_send.Enabled = false;
                 serverSocket.Close();
@@ -213,30 +292,51 @@ namespace CS408_Project_Client
             }
         }
 
-        private void Form1_FormClosing(object sender, System.ComponentModel.CancelEventArgs e)
-        {
-            terminating = true;
-            connected = false;
-            Environment.Exit(0);    //Exit safely...
-        }
-
         private void button__addFriend_Click(object sender, EventArgs e)
         {
-            string friendName = addFriendCode;
-            friendName += textBox_friendName.Text;
+            
+            string friendName = textBox_friendName.Text;
+            string goingFriendName = addFriendCode + friendName;
 
             if (serverSocket.Connected)
             {
-                if (friendName != "" && friendName.Length <= 64)
+                if (!myFriends.Contains(friendName)) // check if this request is coming from friend
                 {
-                    //logs.AppendText("Me:" + message + "\n");
-                    Byte[] buffer = new Byte[64];
-                    buffer = Encoding.Default.GetBytes(friendName);
-                    serverSocket.Send(buffer);
-                    textBox_message.Clear();        //Clearing the textbox for the new usage
+
+                    if (friendName != "" && friendName.Length <= 64 && friendName!= username) // general format check
+                    {
+                        Byte[] buffer = new Byte[64];
+                        buffer = Encoding.Default.GetBytes(goingFriendName);
+
+
+                        if (!sentFriendRequests.Contains(friendName)) // if the request is not in sent requests
+                        {
+                            if (!pendingFriendRequests.Contains(friendName))
+                            {
+                                serverSocket.Send(buffer);
+                                sentFriendRequests.Add(friendName);
+                                //logs.AppendText("Sent a new friend request to " + friendName.Substring(1) + "\n");
+                            }
+                            else
+                                logs.AppendText("You already have a pending friend request! \n");
+
+                        }
+                       
+                        else
+                            logs.AppendText("You've already sent a friend request! \n");
+
+
+                        textBox_friendName.Clear();
+                    }
+
+                    else if (friendName.Substring(1) == username)
+                        logs.AppendText("You can't send friend request to yourself! \n");
+
+                    else
+                        logs.AppendText("Text must be less than or equal to 64 characters! \n");
                 }
                 else
-                    logs.AppendText("Text must be less than or equal to 64 characters! \n");
+                    logs.AppendText("You are already friends. \n");
             }
             else
                 logs.AppendText("The connection has lost with the server!AAA \n");
@@ -244,12 +344,41 @@ namespace CS408_Project_Client
 
         }
 
-        private void button_friendRequests_Click(object sender, EventArgs e)
+        private void Form1_FormClosing(object sender, System.ComponentModel.CancelEventArgs e)
         {
+            terminating = true;
+            connected = false;
+            Environment.Exit(0);    //Exit safely...
+        }
 
+        private void sendNotification(string text)
+        {
+            text = notificationCode + text;
+            Byte[] buffer = new Byte[128];
+            buffer = Encoding.Default.GetBytes(text);
+            serverSocket.Send(buffer);
+        }
 
-            Form2 form2 = new Form2();
-            form2.Show();
+        private void button_accept_Click(object sender, EventArgs e)
+        {
+            string friend = listBox_friendRequests.GetItemText(listBox_friendRequests.SelectedItem);
+            myFriends.Add(friend);
+            pendingFriendRequests.Remove(friend);
+            string notification = "ACCEPTED" + friend;
+            sendNotification(notification);
+            listMyFriends(); // update when you add a new friend
+            listFriendRequests();
+
+        }
+
+        private void button_reject_Click(object sender, EventArgs e)
+        {
+            string friend = listBox_friendRequests.GetItemText(listBox_friendRequests.SelectedItem);
+            pendingFriendRequests.Remove(friend);
+            string notification = "REJECTED" + friend;
+            
+            sendNotification(notification);
+            listFriendRequests();
 
         }
     }
