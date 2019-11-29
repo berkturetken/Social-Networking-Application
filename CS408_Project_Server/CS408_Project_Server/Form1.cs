@@ -27,6 +27,7 @@ namespace CS408_Project_Server
         bool terminating = false;
         bool listening = false;
 
+
         public Form1()
         {
             create_db();
@@ -47,12 +48,13 @@ namespace CS408_Project_Server
                 var path = System.IO.Path.GetDirectoryName(Application.ExecutablePath);
                 //Get rid of the "bin/debug" part in path and add our database file (user_db.txt) to the path
                 path = path.Substring(0, path.Length - 9) + "user_db.txt";
-                List<string> requests = new List<string>();
+                
                 using (StreamReader reader = new StreamReader(path))
                 {
                     string line;
                     while ((line = reader.ReadLine()) != null)
                     {
+                        List<string> requests = new List<string>();
                         userDatabase.Add(line);
                         friendRequests.Add(line, requests);
                     }
@@ -175,7 +177,6 @@ namespace CS408_Project_Server
                         Byte[] requestBuffer = new Byte[64];
                         requestBuffer = Encoding.Default.GetBytes(requestWithCode);
                         thisClient.Send(requestBuffer);
-
                     }
                 }
             }
@@ -250,6 +251,10 @@ namespace CS408_Project_Server
                                 }
                             }
 
+                          
+                            friendRequests[incomingMessage].Add(connectedUsers[thisClient]);
+
+
                             string outgoingMessage = notificationCode + "Sent a new friend request to " + incomingMessage + "\n";
                             Byte[] Outgoingbuffer = new Byte[128];
                             Outgoingbuffer = Encoding.Default.GetBytes(outgoingMessage);
@@ -261,8 +266,12 @@ namespace CS408_Project_Server
                             dummy.Add(connectedUsers[thisClient]);
                             friendRequests[incomingMessage] = dummy;
                             */
-
-                            friendRequests[incomingMessage].Add(connectedUsers[thisClient]);
+                            /*
+                            List<string> dummy = new List<string>();
+                            dummy = friendRequests[incomingMessage];
+                            */
+                           
+                            
                         }
                         else
                         {
@@ -277,13 +286,13 @@ namespace CS408_Project_Server
                         string acceptedFriend = incomingMessage.Substring(8);
                         incomingMessage = incomingMessage.Substring(0, 8);
 
-                        string outgoingMessage = notificationCode + incomingMessage +connectedUsers[thisClient];          //this is not a broadcasting...
+                        string outgoingMessage = notificationCode + incomingMessage + connectedUsers[thisClient];          //this is not a broadcasting...
                         Byte[] Outgoingbuffer = new Byte[128];
                         Outgoingbuffer = Encoding.Default.GetBytes(outgoingMessage);
 
                         friendRequests[connectedUsers[thisClient]].Remove(acceptedFriend);
-                        
-                        foreach(Socket client in connectedUsers.Keys)
+
+                        foreach (Socket client in connectedUsers.Keys)
                         {
                             if (connectedUsers[client] == acceptedFriend)
                             {

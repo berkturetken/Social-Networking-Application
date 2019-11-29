@@ -24,6 +24,7 @@ namespace CS408_Project_Client
         bool terminating = false;
         bool connected = false;
 
+        Mutex mutex;
         Socket serverSocket;
 
         public Form1()
@@ -180,6 +181,7 @@ namespace CS408_Project_Client
                         {
                             string acceptedFriend = incomingMessage.Substring(8);
                             myFriends.Add(acceptedFriend);
+                            logs.AppendText(acceptedFriend + " accepted your friend request."+"\n");
                             listMyFriends();
 
                         }
@@ -187,6 +189,7 @@ namespace CS408_Project_Client
                         else if (incomingMessage.Substring(0, 8) == "REJECTED") { // burada sıkıntı var
                             string rejectedFriend = incomingMessage.Substring(8);
                             sentFriendRequests.Remove(rejectedFriend);
+                            logs.AppendText(rejectedFriend + " rejected your friend request."+"\n");
                             listMyFriends();
                         } // buraya kadar  // karşı taraf reddedince
 
@@ -365,6 +368,7 @@ namespace CS408_Project_Client
             myFriends.Add(friend);
             pendingFriendRequests.Remove(friend);
             string notification = "ACCEPTED" + friend;
+            logs.AppendText("You are now friends with " + friend + "\n");
             sendNotification(notification);
             listMyFriends(); // update when you add a new friend
             listFriendRequests();
@@ -376,7 +380,8 @@ namespace CS408_Project_Client
             string friend = listBox_friendRequests.GetItemText(listBox_friendRequests.SelectedItem);
             pendingFriendRequests.Remove(friend);
             string notification = "REJECTED" + friend;
-            
+            logs.AppendText("You rejected friend request from "+ friend+"\n");
+
             sendNotification(notification);
             listFriendRequests();
 
