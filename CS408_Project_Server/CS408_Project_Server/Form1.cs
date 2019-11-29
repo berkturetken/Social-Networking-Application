@@ -177,9 +177,13 @@ namespace CS408_Project_Server
                         Byte[] requestBuffer = new Byte[64];
                         requestBuffer = Encoding.Default.GetBytes(requestWithCode);
                         thisClient.Send(requestBuffer);
+                        
                     }
+                    friendRequests[user].RemoveRange(0,friendRequests[user].Count);
                 }
             }
+
+            logs.AppendText("Relayed friend requests to " + connectedUsers[thisClient]+"\n");
         }
 
         private void RecieveMessage(Socket thisClient, string incomingMessage)
@@ -249,10 +253,18 @@ namespace CS408_Project_Server
                                     if (connectedUsers[client] == incomingMessage)
                                         client.Send(requestBuffer);
                                 }
+
+                                logs.AppendText("Friend Request from " + connectedUsers[thisClient] + " to " + incomingMessage + " sent.\n");
+                            }
+                            else
+                            {
+                                logs.AppendText("Friend Request from " + connectedUsers[thisClient] + " to " + incomingMessage + " stored.\n");
+                                friendRequests[incomingMessage].Add(connectedUsers[thisClient]);// disarida normalde
+
                             }
 
                           
-                            friendRequests[incomingMessage].Add(connectedUsers[thisClient]);
+                           
 
 
                             string outgoingMessage = notificationCode + "Sent a new friend request to " + incomingMessage + "\n";

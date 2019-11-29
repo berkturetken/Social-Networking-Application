@@ -15,7 +15,7 @@ namespace CS408_Project_Client
         string addFriendCode = "2";
         string notificationCode = "3";
         string readyToGetRequestCode = "4";
-        string username = ""; 
+        string username = "";
 
         List<string> pendingFriendRequests = new List<string>();
         List<string> sentFriendRequests = new List<string>();
@@ -24,7 +24,6 @@ namespace CS408_Project_Client
         bool terminating = false;
         bool connected = false;
 
-        Mutex mutex;
         Socket serverSocket;
 
         public Form1()
@@ -171,9 +170,27 @@ namespace CS408_Project_Client
                     }
                     else if (RequestCode == '2')
                     {
-                        pendingFriendRequests.Add(incomingMessage);
-                        logs.AppendText("Received a new friend request from " + incomingMessage + "\n");
-                        listFriendRequests();
+                        int index;
+                        int len = incomingMessage.Length;
+                        for (int i = 0; i < len; i = index)
+                        {
+                            index = incomingMessage.IndexOf("2");
+                            if (index < 0)
+                            {
+                                pendingFriendRequests.Add(incomingMessage);
+                                logs.AppendText("Received a new friend request from " + incomingMessage + "\n");
+                                listFriendRequests();
+                                index = len;
+                            }
+                            else
+                            {
+                                string x = incomingMessage.Substring(0, index);
+                                incomingMessage = incomingMessage.Substring(index + 1);
+                                pendingFriendRequests.Add(x);
+                                logs.AppendText("Received a new friend request from " + x + "\n");
+                                listFriendRequests();
+                            }
+                        }
                     }
                     else if (RequestCode == '3')
                     {
@@ -181,15 +198,16 @@ namespace CS408_Project_Client
                         {
                             string acceptedFriend = incomingMessage.Substring(8);
                             myFriends.Add(acceptedFriend);
-                            logs.AppendText(acceptedFriend + " accepted your friend request."+"\n");
+                            logs.AppendText(acceptedFriend + " accepted your friend request." + "\n");
                             listMyFriends();
 
                         }
 
-                        else if (incomingMessage.Substring(0, 8) == "REJECTED") { // burada sıkıntı var
+                        else if (incomingMessage.Substring(0, 8) == "REJECTED")
+                        { // burada sıkıntı var
                             string rejectedFriend = incomingMessage.Substring(8);
                             sentFriendRequests.Remove(rejectedFriend);
-                            logs.AppendText(rejectedFriend + " rejected your friend request."+"\n");
+                            logs.AppendText(rejectedFriend + " rejected your friend request." + "\n");
                             listMyFriends();
                         } // buraya kadar  // karşı taraf reddedince
 
@@ -297,7 +315,7 @@ namespace CS408_Project_Client
 
         private void button__addFriend_Click(object sender, EventArgs e)
         {
-            
+
             string friendName = textBox_friendName.Text;
             string goingFriendName = addFriendCode + friendName;
 
@@ -306,7 +324,7 @@ namespace CS408_Project_Client
                 if (!myFriends.Contains(friendName)) // check if this request is coming from friend
                 {
 
-                    if (friendName != "" && friendName.Length <= 64 && friendName!= username) // general format check
+                    if (friendName != "" && friendName.Length <= 64 && friendName != username) // general format check
                     {
                         Byte[] buffer = new Byte[64];
                         buffer = Encoding.Default.GetBytes(goingFriendName);
@@ -324,7 +342,7 @@ namespace CS408_Project_Client
                                 logs.AppendText("You already have a pending friend request! \n");
 
                         }
-                       
+
                         else
                             logs.AppendText("You've already sent a friend request! \n");
 
@@ -380,7 +398,7 @@ namespace CS408_Project_Client
             string friend = listBox_friendRequests.GetItemText(listBox_friendRequests.SelectedItem);
             pendingFriendRequests.Remove(friend);
             string notification = "REJECTED" + friend;
-            logs.AppendText("You rejected friend request from "+ friend+"\n");
+            logs.AppendText("You rejected friend request from " + friend + "\n");
 
             sendNotification(notification);
             listFriendRequests();
