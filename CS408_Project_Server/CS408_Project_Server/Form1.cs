@@ -17,10 +17,14 @@ namespace CS408_Project_Server
         string messageCode = "1";
         string addFriendCode = "2";
         string notificationCode = "3";
+        string acceptedCode = "5";
+        string rejectedCode = "6";
 
         Socket serverSocket = new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp);
         List<Socket> clientSockets = new List<Socket>();
         Dictionary<Socket, string> connectedUsers = new Dictionary<Socket, string>();
+        Dictionary<string, List<string>> acceptedRequests = new Dictionary<string, List<string>>();
+        Dictionary<string, List<string>> rejectedRequests = new Dictionary<string, List<string>>();
         List<string> userDatabase = new List<string>();
         Dictionary<string, List<string>> friendRequests = new Dictionary<string, List<string>>();
 
@@ -48,15 +52,19 @@ namespace CS408_Project_Server
                 var path = System.IO.Path.GetDirectoryName(Application.ExecutablePath);
                 //Get rid of the "bin/debug" part in path and add our database file (user_db.txt) to the path
                 path = path.Substring(0, path.Length - 9) + "user_db.txt";
-                
+
                 using (StreamReader reader = new StreamReader(path))
                 {
                     string line;
                     while ((line = reader.ReadLine()) != null)
                     {
                         List<string> requests = new List<string>();
+                        List<string> acceptedrequests = new List<string>();
+                        List<string> rejectedrequests = new List<string>();
                         userDatabase.Add(line);
                         friendRequests.Add(line, requests);
+                        acceptedRequests.Add(line, acceptedrequests);
+                        rejectedRequests.Add(line, rejectedrequests);
                     }
                     // here is up to you how to find the control to set and to assign the value.
                 }
@@ -177,13 +185,59 @@ namespace CS408_Project_Server
                         Byte[] requestBuffer = new Byte[64];
                         requestBuffer = Encoding.Default.GetBytes(requestWithCode);
                         thisClient.Send(requestBuffer);
-                        
+
                     }
-                    friendRequests[user].RemoveRange(0,friendRequests[user].Count);
+                    friendRequests[user].RemoveRange(0, friendRequests[user].Count);
                 }
             }
 
-            logs.AppendText("Relayed friend requests to " + connectedUsers[thisClient]+"\n");
+            logs.AppendText("Relayed friend requests to " + connectedUsers[thisClient] + "\n");
+        }
+
+        private void sendAccepted(Socket thisClient)
+        {
+            foreach (string user in acceptedRequests.Keys)
+            {
+                if (user == connectedUsers[thisClient])
+                {
+                    foreach (string request in acceptedRequests[user])
+                    {
+                        string requestWithCode = acceptedCode + request;
+                        Byte[] requestBuffer = new Byte[64];
+                        requestBuffer = Encoding.Default.GetBytes(requestWithCode);
+                        thisClient.Send(requestBuffer);
+
+                    }
+                    acceptedRequests[user].RemoveRange(0, acceptedRequests[user].Count);
+                }
+            }
+
+            logs.AppendText("Relayed accepted requests to " + connectedUsers[thisClient] + "\n");
+
+
+        }
+
+        private void sendRejected(Socket thisClient)
+        {
+            foreach (string user in rejectedRequests.Keys)
+            {
+                if (user == connectedUsers[thisClient])
+                {
+                    foreach (string request in rejectedRequests[user])
+                    {
+                        string requestWithCode = rejectedCode + request;
+                        Byte[] requestBuffer = new Byte[64];
+                        requestBuffer = Encoding.Default.GetBytes(requestWithCode);
+                        thisClient.Send(requestBuffer);
+
+                    }
+                    rejectedRequests[user].RemoveRange(0, rejectedRequests[user].Count);
+                }
+            }
+
+            logs.AppendText("Relayed rejected requests to " + connectedUsers[thisClient] + "\n");
+
+
         }
 
         private void RecieveMessage(Socket thisClient, string incomingMessage)
@@ -263,8 +317,8 @@ namespace CS408_Project_Server
 
                             }
 
-                          
-                           
+
+
 
 
                             string outgoingMessage = notificationCode + "Sent a new friend request to " + incomingMessage + "\n";
@@ -282,8 +336,8 @@ namespace CS408_Project_Server
                             List<string> dummy = new List<string>();
                             dummy = friendRequests[incomingMessage];
                             */
-                           
-                            
+
+
                         }
                         else
                         {
@@ -298,17 +352,47 @@ namespace CS408_Project_Server
                         string acceptedFriend = incomingMessage.Substring(8);
                         incomingMessage = incomingMessage.Substring(0, 8);
 
-                        string outgoingMessage = notificationCode + incomingMessage + connectedUsers[thisClient];          //this is not a broadcasting...
-                        Byte[] Outgoingbuffer = new Byte[128];
-                        Outgoingbuffer = Encoding.Default.GetBytes(outgoingMessage);
 
-                        friendRequests[connectedUsers[thisClient]].Remove(acceptedFriend);
-
-                        foreach (Socket client in connectedUsers.Keys)
+                        if (connectedUsers.ContainsValue(acceptedFriend))
                         {
-                            if (connectedUsers[client] == acceptedFriend)
+                            string outgoingMessage = notificationCode + incomingMessage + connectedUsers[thisClient];          //this is not a broadcasting...
+                            Byte[] Outgoingbuffer = new Byte[128];
+                            Outgoingbuffer = Encoding.Default.GetBytes(outgoingMessage);
+
+                            friendRequests[connectedUsers[thisClient]].Remove(acceptedFriend);
+
+                            foreach (Socket client in connectedUsers.Keys)
                             {
-                                client.Send(Outgoingbuffer);
+                                if (connectedUsers[client] == acceptedFriend)
+                                {
+                                    client.Send(Outgoingbuffer);
+                                }
+                            }
+
+                            if (incomingMessage == "ACCEPTED")
+                            {
+                                logs.AppendText("acceptance from " + connectedUsers[thisClient] + " to " + acceptedFriend + " sent.\n");
+
+                            }
+                            else
+                            {
+                                logs.AppendText("rejection from " + connectedUsers[thisClient] + " to " + acceptedFriend + " sent.\n");
+
+                            }
+
+                        }
+                        else
+                        {
+
+                            if (incomingMessage == "ACCEPTED")
+                            {
+                                logs.AppendText("acceptance from " + connectedUsers[thisClient] + " to " + acceptedFriend + " stored.\n");
+                                acceptedRequests[acceptedFriend].Add(connectedUsers[thisClient]);
+                            }
+                            else
+                            {
+                                logs.AppendText("rejection from " + connectedUsers[thisClient] + " to " + acceptedFriend + " stored.\n");
+                                rejectedRequests[acceptedFriend].Add(connectedUsers[thisClient]);
                             }
                         }
 
@@ -316,6 +400,9 @@ namespace CS408_Project_Server
                     else if (RequestCode == '4')
                     {
                         sendRequest(thisClient);
+                        sendAccepted(thisClient);
+                        sendRejected(thisClient);
+
                     }
                     else
                     {

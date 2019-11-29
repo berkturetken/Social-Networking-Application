@@ -15,6 +15,8 @@ namespace CS408_Project_Client
         string addFriendCode = "2";
         string notificationCode = "3";
         string readyToGetRequestCode = "4";
+        string acceptedCode = "5";
+        string rejectedCode = "6";
         string username = "";
 
         List<string> pendingFriendRequests = new List<string>();
@@ -62,7 +64,7 @@ namespace CS408_Project_Client
             if (Int32.TryParse(textBox_port.Text, out portNum))
             {
                 //Second, check the IP address
-                if (IP == currIP || IP == "")
+                if (IP == currIP)
                 {
                     try
                     {
@@ -141,7 +143,7 @@ namespace CS408_Project_Client
                     button_send.Enabled = false;
                     button_disconnect.Enabled = false;
                     button_connect.Enabled = true;
-                    logs.AppendText("Server has disconnected\n");
+                    logs.AppendText("Disconnected from server\n");
                     connected = false;
                 }
                 serverSocket.Close();
@@ -216,6 +218,56 @@ namespace CS408_Project_Client
                             logs.AppendText(incomingMessage);
                         }
                     }
+                    else if(RequestCode == '5')
+                    {
+                        int index;
+                        int len = incomingMessage.Length;
+                        for (int i = 0; i < len; i = index)
+                        {
+                            index = incomingMessage.IndexOf("5");
+                            if (index < 0)
+                            {
+                                myFriends.Add(incomingMessage);
+                                logs.AppendText(incomingMessage + " accepted your friend request." + "\n");
+                                listMyFriends();
+                                index = len;
+                            }
+                            else
+                            {
+                                string x = incomingMessage.Substring(0, index);
+                                incomingMessage = incomingMessage.Substring(index + 1);
+                                myFriends.Add(x);
+                                logs.AppendText(x + " accepted your friend request." + "\n");
+                                listMyFriends();
+                            }
+                        }
+
+                    }
+                    else if (RequestCode == '6')
+                    {
+                        int index;
+                        int len = incomingMessage.Length;
+                        for (int i = 0; i < len; i = index)
+                        {
+                            index = incomingMessage.IndexOf("6");
+                            if (index < 0)
+                            {
+                                
+                                logs.AppendText(incomingMessage + " rejected your friend request." + "\n");
+                                sentFriendRequests.Remove(incomingMessage);
+                                index = len;
+                            }
+                            else
+                            {
+                                string x = incomingMessage.Substring(0, index);
+                                incomingMessage = incomingMessage.Substring(index + 1);
+                                sentFriendRequests.Remove(x);
+                                logs.AppendText(x + " rejected your friend request." + "\n");
+                                
+                            }
+                        }
+
+                    }
                 }
                 catch
                 {
@@ -226,7 +278,7 @@ namespace CS408_Project_Client
                         button_send.Enabled = false;
                         button_disconnect.Enabled = false;
                         button_connect.Enabled = true;
-                        logs.AppendText("Server has disconnected\n");
+                        logs.AppendText("Disconnected from server\n");
                     }
                     serverSocket.Close();
                     connected = false;
