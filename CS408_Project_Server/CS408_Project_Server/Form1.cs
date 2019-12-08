@@ -18,15 +18,15 @@ namespace CS408_Project_Server
         char broadcastMessageCode = '1';
         char addFriendCode = '2';
         char notificationCode = '3';
-        char updateLists = '4';
+        char updateRequests = '4';
         string getNotification = "5";
         char getRequests = '6';
         char getFriends = '7';
+        char updateFriends = '8';
 
         Socket serverSocket = new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp);
         List<Socket> clientSockets = new List<Socket>();
-        Dictionary<Socket, string> connectedUsers = new Dictionary<Socket, string>();  
-       
+        Dictionary<Socket, string> connectedUsers = new Dictionary<Socket, string>();
         List<Client> userList = new List<Client>();
 
         bool terminating = false;
@@ -82,7 +82,7 @@ namespace CS408_Project_Server
 
 
                         List<string> requests = new List<string>();
-                       
+
                         Client newClient = new Client(line);
                         userList.Add(newClient);
                     }
@@ -133,9 +133,6 @@ namespace CS408_Project_Server
                     Socket newClient = serverSocket.Accept();
                     clientSockets.Add(newClient);
 
-
-
-
                     Thread RecieveThread = new Thread(Recieve);
                     RecieveThread.Start();
                 }
@@ -152,18 +149,14 @@ namespace CS408_Project_Server
         //Recieving a name from clients and checking if they are authorized to connect
         private void NameCheck(Socket thisClient, string incomingMessage)
         {
-            //  Byte[] buffer = new Byte[128];
-            // thisClient.Receive(buffer);
 
-            // string username = Encoding.Default.GetString(buffer);
-            // username = username.Substring(0, username.IndexOf("\0"));
 
             string username = incomingMessage;
 
             //If the username is in the database, then send a "Successful" message to the client, 
             //add the user to the connectedUsers dictionary, log as "connected", and 
             //ready to transfer his/her message to other clients.
-            if (findClientByName(username)!=null && !connectedUsers.ContainsValue(username))
+            if (findClientByName(username) != null && !connectedUsers.ContainsValue(username))
             {
                 string message = "Successful";
                 Byte[] buffer2 = new Byte[128];
@@ -171,8 +164,6 @@ namespace CS408_Project_Server
                 thisClient.Send(buffer2);
                 connectedUsers.Add(thisClient, username);
                 findClientByName(username).socket = thisClient;
-
-
 
 
                 logs.AppendText(username + " is connected.\n");
@@ -202,7 +193,7 @@ namespace CS408_Project_Server
         {
 
             List<string> requests = findClientBySocket(thisClient).GetFriendRequests();
-            if (requests.Count() == 0)
+            /*if (requests.Count() == 0)
             {
                 string requestWithCode = getRequests+"";
                 Byte[] requestBuffer = new Byte[64];
@@ -210,7 +201,7 @@ namespace CS408_Project_Server
                 thisClient.Send(requestBuffer);
                 return;
             }
-               
+               */
 
             foreach (string request in requests)
             {
@@ -227,15 +218,15 @@ namespace CS408_Project_Server
         {
             List<string> myFriends = findClientBySocket(thisClient).GetFriends();
 
-            if (myFriends.Count() == 0)
-            {
-                string requestWithCode = getFriends + "";
-                Byte[] requestBuffer = new Byte[64];
-                requestBuffer = Encoding.Default.GetBytes(requestWithCode);
-                thisClient.Send(requestBuffer);
-                return;
-            }
-
+            /*  if (myFriends.Count() == 0)
+              {
+                  string requestWithCode = getFriends + "";
+                  Byte[] requestBuffer = new Byte[64];
+                  requestBuffer = Encoding.Default.GetBytes(requestWithCode);
+                  thisClient.Send(requestBuffer);
+                  return;
+              }
+              */
 
             foreach (string friend in myFriends)
             {
@@ -377,7 +368,6 @@ namespace CS408_Project_Server
             if (connectedUsers.ContainsValue(reciever))
             {
 
-
                 Byte[] Outgoingbuffer = new Byte[128];
                 if (status == "ACCEPTED")
                 {
@@ -390,7 +380,7 @@ namespace CS408_Project_Server
                     findClientByName(reciever).AddFriend(connectedUsers[thisClient]);
                     findClientByName(reciever).DeletePendingFriendRequest(connectedUsers[thisClient]);
 
-                  
+
                     sendFriends(recieverSocket);
                     sendRequest(recieverSocket);
                     logs.AppendText("acceptance from " + connectedUsers[thisClient] + " to " + reciever + " sent.\n");
@@ -473,11 +463,13 @@ namespace CS408_Project_Server
                         NotificationStatus(thisClient, reciever, status);
 
                     }
-                    else if (RequestCode == updateLists)
-                    {
+                    else if (RequestCode == updateRequests)
+
                         sendRequest(thisClient);
+
+
+                    else if (RequestCode == updateFriends)
                         sendFriends(thisClient);
-                    }
                     else
                     {
                         logs.AppendText("Error...");

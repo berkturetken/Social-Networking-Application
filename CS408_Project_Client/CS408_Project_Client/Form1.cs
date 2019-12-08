@@ -14,12 +14,13 @@ namespace CS408_Project_Client
         char broadcastMessageCode = '1';
         char addFriendCode = '2';
         char notificationCode = '3';
-        string updateLists = "4";
+        string updateRequests = "4";
         string getNotification = "5";
         char getRequests = '6';
         char getFriends = '7';
-
+        string updateFriends = "8";
         string username = "";
+
 
         bool terminating = false;
         bool connected = false;
@@ -89,10 +90,16 @@ namespace CS408_Project_Client
         }
 
 
-        private void Update_lists()
+        private void Update_friends()
         {
             Byte[] updateListsBuffer = new Byte[128];
-            updateListsBuffer = Encoding.Default.GetBytes(updateLists);
+            updateListsBuffer = Encoding.Default.GetBytes(updateFriends);
+            serverSocket.Send(updateListsBuffer);
+        }
+        private void Update_requests()
+        {
+            Byte[] updateListsBuffer = new Byte[128];
+            updateListsBuffer = Encoding.Default.GetBytes(updateRequests);
             serverSocket.Send(updateListsBuffer);
         }
         private void Get_Notifications()
@@ -136,7 +143,8 @@ namespace CS408_Project_Client
                     button_reject.Enabled = true;
 
                     logs.AppendText("Connected to the server!\n");
-                    Update_lists();
+                    Update_friends();
+                    Update_requests();
                     Get_Notifications();
 
                     Thread recieveThread = new Thread(recieve);
@@ -169,6 +177,7 @@ namespace CS408_Project_Client
                 try
                 {
                     Byte[] Incomingbuffer = new Byte[128];
+                    
                     serverSocket.Receive(Incomingbuffer);
 
                     string incomingMessage = Encoding.Default.GetString(Incomingbuffer);
@@ -188,14 +197,53 @@ namespace CS408_Project_Client
                     else if (RequestCode == getRequests)
                     {
                         listBox_friendRequests.Items.Clear();
+
+                        int index;
+                        int len = incomingMessage.Length;
+                        for (int i = 0; i < len; i = index)
+                        {
+                            index = incomingMessage.IndexOf("6");
+                            if (index < 0)
+                            {
+                                listBox_friendRequests.Items.Add(incomingMessage);
+                                index = len;
+                            }
+                            else
+                            {
+                                string x = incomingMessage.Substring(0, index);
+                                incomingMessage = incomingMessage.Substring(index + 1);
+                                listBox_friendRequests.Items.Add(x);
+                            }
+                        }
+                        /*listBox_friendRequests.Items.Clear();
                         if (incomingMessage != "")
                         {
                             string request = incomingMessage;
                             listBox_friendRequests.Items.Add(request);
-                        }
+                        }*/
                     }
                     else if (RequestCode == getFriends)
                     {
+                        listBox_friendsList.Items.Clear();
+                        int index;
+                        int len = incomingMessage.Length;
+                        for (int i = 0; i < len; i = index)
+                        {
+                            index = incomingMessage.IndexOf("7");
+                            if (index < 0)
+                            {
+                                listBox_friendsList.Items.Add(incomingMessage);
+                                index = len;
+                            }
+                            else
+                            {
+                                string x = incomingMessage.Substring(0, index);
+                                incomingMessage = incomingMessage.Substring(index + 1);
+                                listBox_friendsList.Items.Add(x);
+                            }
+                        }
+
+                        /*
                         listBox_friendsList.Items.Clear();
                         if (incomingMessage != "")
                         {
@@ -203,6 +251,7 @@ namespace CS408_Project_Client
 
                             listBox_friendsList.Items.Add(friend);
                         }
+                        */
                     }
 
                 }
@@ -303,13 +352,6 @@ namespace CS408_Project_Client
 
         }
 
-        private void Form1_FormClosing(object sender, System.ComponentModel.CancelEventArgs e)
-        {
-            terminating = true;
-            connected = false;
-            Environment.Exit(0);    //Exit safely...
-        }
-
         private void sendNotification(string text)
         {
             text = notificationCode + text;
@@ -324,7 +366,8 @@ namespace CS408_Project_Client
             string notification = "ACCEPTED" + friend;
             logs.AppendText("You are now friends with " + friend + "\n");
             sendNotification(notification);
-            Update_lists();
+            Update_friends();
+            Update_requests();
         }
 
         private void button_reject_Click(object sender, EventArgs e)
@@ -335,8 +378,13 @@ namespace CS408_Project_Client
             logs.AppendText("You rejected friend request from " + friend + "\n");
 
             sendNotification(notification);
-            Update_lists();
-
+            Update_requests();
+        }
+        private void Form1_FormClosing(object sender, System.ComponentModel.CancelEventArgs e)
+        {
+            terminating = true;
+            connected = false;
+            Environment.Exit(0);    //Exit safely...
         }
     }
 }
