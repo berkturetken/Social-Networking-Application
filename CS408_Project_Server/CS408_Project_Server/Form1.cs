@@ -4,6 +4,7 @@ using System.IO;
 using System.Linq;
 using System.Net;
 using System.Net.Sockets;
+using System.Runtime.Serialization.Formatters.Binary;
 using System.Text;
 using System.Threading;
 using System.Windows.Forms;
@@ -13,23 +14,43 @@ namespace CS408_Project_Server
 {
     public partial class Form1 : Form
     {
-
-        string messageCode = "1";
-        string addFriendCode = "2";
-        string notificationCode = "3";
-        string acceptedCode = "5";
-        string rejectedCode = "6";
+        string nameCode = "0";
+        char broadcastMessageCode = '1';
+        char addFriendCode = '2';
+        char notificationCode = '3';
+        char updateLists = '4';
+        string getNotification = "5";
+        char getRequests = '6';
+        char getFriends = '7';
 
         Socket serverSocket = new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp);
         List<Socket> clientSockets = new List<Socket>();
-        Dictionary<Socket, string> connectedUsers = new Dictionary<Socket, string>();
-        Dictionary<string, List<string>> acceptedRequests = new Dictionary<string, List<string>>();
-        Dictionary<string, List<string>> rejectedRequests = new Dictionary<string, List<string>>();
-        List<string> userDatabase = new List<string>();
-        Dictionary<string, List<string>> friendRequests = new Dictionary<string, List<string>>();
+        Dictionary<Socket, string> connectedUsers = new Dictionary<Socket, string>();  
+       
+        List<Client> userList = new List<Client>();
 
         bool terminating = false;
         bool listening = false;
+
+        private Client findClientByName(string name)
+        {
+            foreach (Client client in userList)
+            {
+                if (client.name == name)
+                    return client;
+            }
+            return null;
+        }
+
+        private Client findClientBySocket(Socket socket)
+        {
+            foreach (Client client in userList)
+            {
+                if (client.socket == socket)
+                    return client;
+            }
+            return null;
+        }
 
 
         public Form1()
@@ -58,13 +79,12 @@ namespace CS408_Project_Server
                     string line;
                     while ((line = reader.ReadLine()) != null)
                     {
+
+
                         List<string> requests = new List<string>();
-                        List<string> acceptedrequests = new List<string>();
-                        List<string> rejectedrequests = new List<string>();
-                        userDatabase.Add(line);
-                        friendRequests.Add(line, requests);
-                        acceptedRequests.Add(line, acceptedrequests);
-                        rejectedRequests.Add(line, rejectedrequests);
+                       
+                        Client newClient = new Client(line);
+                        userList.Add(newClient);
                     }
                     // here is up to you how to find the control to set and to assign the value.
                 }
@@ -113,6 +133,9 @@ namespace CS408_Project_Server
                     Socket newClient = serverSocket.Accept();
                     clientSockets.Add(newClient);
 
+
+
+
                     Thread RecieveThread = new Thread(Recieve);
                     RecieveThread.Start();
                 }
@@ -127,7 +150,7 @@ namespace CS408_Project_Server
         }
 
         //Recieving a name from clients and checking if they are authorized to connect
-        private void ReceiveName(Socket thisClient, string incomingMessage)
+        private void NameCheck(Socket thisClient, string incomingMessage)
         {
             //  Byte[] buffer = new Byte[128];
             // thisClient.Receive(buffer);
@@ -140,13 +163,15 @@ namespace CS408_Project_Server
             //If the username is in the database, then send a "Successful" message to the client, 
             //add the user to the connectedUsers dictionary, log as "connected", and 
             //ready to transfer his/her message to other clients.
-            if (userDatabase.Contains(username) && !connectedUsers.ContainsValue(username))
+            if (findClientByName(username)!=null && !connectedUsers.ContainsValue(username))
             {
                 string message = "Successful";
                 Byte[] buffer2 = new Byte[128];
                 buffer2 = Encoding.Default.GetBytes(message);
                 thisClient.Send(buffer2);
                 connectedUsers.Add(thisClient, username);
+                findClientByName(username).socket = thisClient;
+
 
 
 
@@ -175,76 +200,79 @@ namespace CS408_Project_Server
 
         private void sendRequest(Socket thisClient)
         {
-            foreach (string user in friendRequests.Keys)
-            {
-                if (user == connectedUsers[thisClient])
-                {
-                    foreach (string request in friendRequests[user])
-                    {
-                        string requestWithCode = addFriendCode + request;
-                        Byte[] requestBuffer = new Byte[64];
-                        requestBuffer = Encoding.Default.GetBytes(requestWithCode);
-                        thisClient.Send(requestBuffer);
 
-                    }
-                    friendRequests[user].RemoveRange(0, friendRequests[user].Count);
-                }
+            List<string> requests = findClientBySocket(thisClient).GetFriendRequests();
+            if (requests.Count() == 0)
+            {
+                string requestWithCode = getRequests+"";
+                Byte[] requestBuffer = new Byte[64];
+                requestBuffer = Encoding.Default.GetBytes(requestWithCode);
+                thisClient.Send(requestBuffer);
+                return;
+            }
+               
+
+            foreach (string request in requests)
+            {
+                string requestWithCode = getRequests + request;
+                Byte[] requestBuffer = new Byte[64];
+                requestBuffer = Encoding.Default.GetBytes(requestWithCode);
+                thisClient.Send(requestBuffer);
             }
 
             logs.AppendText("Relayed friend requests to " + connectedUsers[thisClient] + "\n");
         }
 
-        private void sendAccepted(Socket thisClient)
+        private void sendFriends(Socket thisClient)
         {
-            foreach (string user in acceptedRequests.Keys)
-            {
-                if (user == connectedUsers[thisClient])
-                {
-                    foreach (string request in acceptedRequests[user])
-                    {
-                        string requestWithCode = acceptedCode + request;
-                        Byte[] requestBuffer = new Byte[64];
-                        requestBuffer = Encoding.Default.GetBytes(requestWithCode);
-                        thisClient.Send(requestBuffer);
+            List<string> myFriends = findClientBySocket(thisClient).GetFriends();
 
-                    }
-                    acceptedRequests[user].RemoveRange(0, acceptedRequests[user].Count);
-                }
+            if (myFriends.Count() == 0)
+            {
+                string requestWithCode = getFriends + "";
+                Byte[] requestBuffer = new Byte[64];
+                requestBuffer = Encoding.Default.GetBytes(requestWithCode);
+                thisClient.Send(requestBuffer);
+                return;
             }
 
-            logs.AppendText("Relayed accepted requests to " + connectedUsers[thisClient] + "\n");
+
+            foreach (string friend in myFriends)
+            {
+                string requestWithCode = getFriends + friend;
+                Byte[] requestBuffer = new Byte[64];
+                requestBuffer = Encoding.Default.GetBytes(requestWithCode);
+                thisClient.Send(requestBuffer);
+            }
+
+
+
+            logs.AppendText("Relayed friends list to " + connectedUsers[thisClient] + "\n");
 
 
         }
 
-        private void sendRejected(Socket thisClient)
+        private void sendNotifications(Socket thisClient)
         {
-            foreach (string user in rejectedRequests.Keys)
+            List<string> notifications = findClientBySocket(thisClient).GetNotifications();
+
+            foreach (string notification in notifications)
             {
-                if (user == connectedUsers[thisClient])
-                {
-                    foreach (string request in rejectedRequests[user])
-                    {
-                        string requestWithCode = rejectedCode + request;
-                        Byte[] requestBuffer = new Byte[64];
-                        requestBuffer = Encoding.Default.GetBytes(requestWithCode);
-                        thisClient.Send(requestBuffer);
-
-                    }
-                    rejectedRequests[user].RemoveRange(0, rejectedRequests[user].Count);
-                }
+                string requestWithCode = notificationCode + notification;
+                Byte[] requestBuffer = new Byte[64];
+                requestBuffer = Encoding.Default.GetBytes(requestWithCode);
+                thisClient.Send(requestBuffer);
             }
-
-            logs.AppendText("Relayed rejected requests to " + connectedUsers[thisClient] + "\n");
-
-
+            findClientBySocket(thisClient).DeleteAllNotifications();
+            logs.AppendText("Relayed notification list to " + connectedUsers[thisClient] + "\n");
         }
 
-        private void RecieveMessage(Socket thisClient, string incomingMessage)
+
+        private void BroadCastMessage(Socket thisClient, string incomingMessage)
         {
             string outgoingMessage = connectedUsers[thisClient] + ": " + incomingMessage + "\n";
             Byte[] Outgoingbuffer = new Byte[128];
-            outgoingMessage = messageCode + outgoingMessage;
+            outgoingMessage = broadcastMessageCode + outgoingMessage;
             Outgoingbuffer = Encoding.Default.GetBytes(outgoingMessage);
 
             logs.AppendText("Recieved a message from " + connectedUsers[thisClient] + " \n");
@@ -262,6 +290,149 @@ namespace CS408_Project_Server
                 logs.AppendText("No other user to send message in the server right now! \n");
             else
                 logs.AppendText("Sent it to the other clients!\n");
+        }
+
+        private void AddFriend(Socket thisClient, string reciever)
+        {
+            Client recieverClient = findClientByName(reciever);
+            Client senderClient = findClientBySocket(thisClient);
+            if (recieverClient != null)
+            {
+                if (!senderClient.GetFriendRequests().Contains(recieverClient.name) && !senderClient.GetPendingFriendRequests().Contains(recieverClient.name))
+                {
+                    if (!senderClient.GetFriends().Contains(recieverClient.name))
+                    {
+                        //Update Client's requestlists 
+                        findClientBySocket(thisClient).AddPendingFriendRequest(reciever);
+                        findClientByName(reciever).AddFriendRequest(senderClient.name);
+
+
+                        //if the reciever is online send the updated requests list and notification
+                        if (connectedUsers.ContainsValue(reciever))
+                        {
+                            sendRequest(findClientByName(reciever).socket);
+
+                            string notification = getNotification + "Received a new friend request from " + connectedUsers[thisClient] + "\n";
+                            Byte[] notificationBuffer = new Byte[64];
+                            notificationBuffer = Encoding.Default.GetBytes(notification);
+
+                            foreach (Socket client in connectedUsers.Keys)
+                            {
+
+                                if (connectedUsers[client] == reciever)
+                                    client.Send(notificationBuffer);
+                            }
+
+                            logs.AppendText("Friend Request from " + connectedUsers[thisClient] + " to " + reciever + " sent.\n");
+                        }
+                        //store the request and notification
+                        else
+                        {
+                            logs.AppendText("Friend Request from " + connectedUsers[thisClient] + " to " + reciever + " stored.\n");
+
+                            findClientByName(reciever).AddNotification("Received a new friend request from " + connectedUsers[thisClient] + "\n");
+                        }
+
+
+
+                        //notification for sender
+                        string outgoingMessage = getNotification + "Sent a new friend request to " + reciever + "\n";
+                        Byte[] Outgoingbuffer = new Byte[128];
+                        Outgoingbuffer = Encoding.Default.GetBytes(outgoingMessage);
+                        thisClient.Send(Outgoingbuffer);
+                    }
+                    else
+                    {
+                        string outgoingMessage = getNotification + "You are already friends with " + recieverClient.name + " \n";
+                        Byte[] Outgoingbuffer = new Byte[128];
+                        Outgoingbuffer = Encoding.Default.GetBytes(outgoingMessage);
+                        thisClient.Send(Outgoingbuffer);
+                    }
+
+                }
+
+                else
+                {
+                    string outgoingMessage = getNotification + "You have already a request waiting! \n";
+                    Byte[] Outgoingbuffer = new Byte[128];
+                    Outgoingbuffer = Encoding.Default.GetBytes(outgoingMessage);
+                    thisClient.Send(Outgoingbuffer);
+                }
+
+            }
+            else
+            {
+                string outgoingMessage = getNotification + "The name is not in database! \n";
+                Byte[] Outgoingbuffer = new Byte[128];
+                Outgoingbuffer = Encoding.Default.GetBytes(outgoingMessage);
+                thisClient.Send(Outgoingbuffer);
+            }
+
+        }
+
+        private void NotificationStatus(Socket thisClient, string reciever, string status)
+        {
+
+            Socket recieverSocket = findClientByName(reciever).socket;
+            if (connectedUsers.ContainsValue(reciever))
+            {
+
+
+                Byte[] Outgoingbuffer = new Byte[128];
+                if (status == "ACCEPTED")
+                {
+                    string outgoingMessage = getNotification + connectedUsers[thisClient] + " accepted your friend request." + "\n";    //this is not a broadcasting...
+
+                    Outgoingbuffer = Encoding.Default.GetBytes(outgoingMessage);
+
+                    findClientBySocket(thisClient).DeleteFriendRequest(reciever);
+                    findClientBySocket(thisClient).AddFriend(reciever);
+                    findClientByName(reciever).AddFriend(connectedUsers[thisClient]);
+                    findClientByName(reciever).DeletePendingFriendRequest(connectedUsers[thisClient]);
+
+                  
+                    sendFriends(recieverSocket);
+                    sendRequest(recieverSocket);
+                    logs.AppendText("acceptance from " + connectedUsers[thisClient] + " to " + reciever + " sent.\n");
+
+
+                }
+                else
+                {
+                    string outgoingMessage = getNotification + connectedUsers[thisClient] + " rejected your friend request." + "\n";    //this is not a broadcasting...
+
+                    Outgoingbuffer = Encoding.Default.GetBytes(outgoingMessage);
+
+                    logs.AppendText("rejection from " + connectedUsers[thisClient] + " to " + reciever + " sent.\n");
+                    findClientBySocket(thisClient).DeleteFriendRequest(reciever);
+                    findClientByName(reciever).DeletePendingFriendRequest(connectedUsers[thisClient]);
+
+                }
+
+                recieverSocket.Send(Outgoingbuffer);
+
+            }
+            else
+            {
+
+                if (status == "ACCEPTED")
+                {
+                    logs.AppendText("acceptance from " + connectedUsers[thisClient] + " to " + reciever + " stored.\n");
+
+                    findClientBySocket(thisClient).DeleteFriendRequest(reciever);
+                    findClientBySocket(thisClient).AddFriend(reciever);
+                    findClientByName(reciever).AddFriend(connectedUsers[thisClient]);
+                    findClientByName(reciever).DeletePendingFriendRequest(connectedUsers[thisClient]);
+                    findClientByName(reciever).AddNotification(connectedUsers[thisClient] + " accepted your friend request." + "\n");
+                }
+                else
+                {
+                    logs.AppendText("rejection from " + connectedUsers[thisClient] + " to " + reciever + " stored.\n");
+                    findClientBySocket(thisClient).DeleteFriendRequest(reciever);
+                    findClientByName(reciever).DeletePendingFriendRequest(connectedUsers[thisClient]);
+                    findClientByName(reciever).AddNotification(connectedUsers[thisClient] + " rejected your friend request." + "\n");
+                }
+            }
         }
 
         //Recieving meesages from clients
@@ -282,127 +453,30 @@ namespace CS408_Project_Server
                     char RequestCode = incomingMessage[0];
                     incomingMessage = incomingMessage.Substring(1);
 
-                    if (RequestCode == '0') //name control
+                    if (RequestCode == nameCode[0]) //name control
                     {
-                        ReceiveName(thisClient, incomingMessage);
+                        NameCheck(thisClient, incomingMessage);
                     }
-                    else if (RequestCode == '1') //msg broadcast
+                    else if (RequestCode == broadcastMessageCode) //msg broadcast
                     {
-                        RecieveMessage(thisClient, incomingMessage);
+                        BroadCastMessage(thisClient, incomingMessage);
                     }
-                    else if (RequestCode == '2') // friend request
+                    else if (RequestCode == addFriendCode) // friend request
                     {
-                        if (userDatabase.Contains(incomingMessage))
-                        {
-                            if (connectedUsers.ContainsValue(incomingMessage))
-                            {
-                                //RecieveFriendRequest(thisClient, incomingMessage);
-                                string requestWithCode = RequestCode + connectedUsers[thisClient];
-                                Byte[] requestBuffer = new Byte[64];
-                                requestBuffer = Encoding.Default.GetBytes(requestWithCode);
-
-                                foreach (Socket client in connectedUsers.Keys)
-                                {
-
-                                    if (connectedUsers[client] == incomingMessage)
-                                        client.Send(requestBuffer);
-                                }
-
-                                logs.AppendText("Friend Request from " + connectedUsers[thisClient] + " to " + incomingMessage + " sent.\n");
-                            }
-                            else
-                            {
-                                logs.AppendText("Friend Request from " + connectedUsers[thisClient] + " to " + incomingMessage + " stored.\n");
-                                friendRequests[incomingMessage].Add(connectedUsers[thisClient]);// disarida normalde
-
-                            }
-
-
-
-
-
-                            string outgoingMessage = notificationCode + "Sent a new friend request to " + incomingMessage + "\n";
-                            Byte[] Outgoingbuffer = new Byte[128];
-                            Outgoingbuffer = Encoding.Default.GetBytes(outgoingMessage);
-                            thisClient.Send(Outgoingbuffer);
-
-                            /* --- NOT WORKING ---
-                            List<string> dummy = new List<string>();
-                            dummy = friendRequests[incomingMessage];
-                            dummy.Add(connectedUsers[thisClient]);
-                            friendRequests[incomingMessage] = dummy;
-                            */
-                            /*
-                            List<string> dummy = new List<string>();
-                            dummy = friendRequests[incomingMessage];
-                            */
-
-
-                        }
-                        else
-                        {
-                            string outgoingMessage = notificationCode + "The name is not in database! \n";          //this is not a broadcasting...
-                            Byte[] Outgoingbuffer = new Byte[128];
-                            Outgoingbuffer = Encoding.Default.GetBytes(outgoingMessage);
-                            thisClient.Send(Outgoingbuffer);
-                        }
+                        AddFriend(thisClient, incomingMessage);
                     }
-                    else if (RequestCode == '3')
+                    else if (RequestCode == notificationCode)
                     {
-                        string acceptedFriend = incomingMessage.Substring(8);
-                        incomingMessage = incomingMessage.Substring(0, 8);
+                        string reciever = incomingMessage.Substring(8);
+                        string status = incomingMessage.Substring(0, 8);
 
-
-                        if (connectedUsers.ContainsValue(acceptedFriend))
-                        {
-                            string outgoingMessage = notificationCode + incomingMessage + connectedUsers[thisClient];          //this is not a broadcasting...
-                            Byte[] Outgoingbuffer = new Byte[128];
-                            Outgoingbuffer = Encoding.Default.GetBytes(outgoingMessage);
-
-                            friendRequests[connectedUsers[thisClient]].Remove(acceptedFriend);
-
-                            foreach (Socket client in connectedUsers.Keys)
-                            {
-                                if (connectedUsers[client] == acceptedFriend)
-                                {
-                                    client.Send(Outgoingbuffer);
-                                }
-                            }
-
-                            if (incomingMessage == "ACCEPTED")
-                            {
-                                logs.AppendText("acceptance from " + connectedUsers[thisClient] + " to " + acceptedFriend + " sent.\n");
-
-                            }
-                            else
-                            {
-                                logs.AppendText("rejection from " + connectedUsers[thisClient] + " to " + acceptedFriend + " sent.\n");
-
-                            }
-
-                        }
-                        else
-                        {
-
-                            if (incomingMessage == "ACCEPTED")
-                            {
-                                logs.AppendText("acceptance from " + connectedUsers[thisClient] + " to " + acceptedFriend + " stored.\n");
-                                acceptedRequests[acceptedFriend].Add(connectedUsers[thisClient]);
-                            }
-                            else
-                            {
-                                logs.AppendText("rejection from " + connectedUsers[thisClient] + " to " + acceptedFriend + " stored.\n");
-                                rejectedRequests[acceptedFriend].Add(connectedUsers[thisClient]);
-                            }
-                        }
+                        NotificationStatus(thisClient, reciever, status);
 
                     }
-                    else if (RequestCode == '4')
+                    else if (RequestCode == updateLists)
                     {
                         sendRequest(thisClient);
-                        sendAccepted(thisClient);
-                        sendRejected(thisClient);
-
+                        sendFriends(thisClient);
                     }
                     else
                     {
@@ -431,6 +505,7 @@ namespace CS408_Project_Server
                     thisClient.Close();
                     clientSockets.Remove(thisClient);
                     connectedUsers.Remove(thisClient);
+                    findClientBySocket(thisClient).connected = false;
                     connected = false;
                 }
             }
