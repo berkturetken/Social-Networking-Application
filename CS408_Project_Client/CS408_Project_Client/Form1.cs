@@ -93,19 +93,19 @@ namespace CS408_Project_Client
         private void Update_friends()
         {
             Byte[] updateListsBuffer = new Byte[128];
-            updateListsBuffer = Encoding.Default.GetBytes(updateFriends);
+            updateListsBuffer = Encoding.Default.GetBytes(updateFriends+"(end)");
             serverSocket.Send(updateListsBuffer);
         }
         private void Update_requests()
         {
             Byte[] updateListsBuffer = new Byte[128];
-            updateListsBuffer = Encoding.Default.GetBytes(updateRequests);
+            updateListsBuffer = Encoding.Default.GetBytes(updateRequests+"(end)");
             serverSocket.Send(updateListsBuffer);
         }
         private void Get_Notifications()
         {
             Byte[] getNotificationBuffer = new Byte[128];
-            getNotificationBuffer = Encoding.Default.GetBytes(getNotification);
+            getNotificationBuffer = Encoding.Default.GetBytes(getNotification+ "(end)");
             serverSocket.Send(getNotificationBuffer);
         }
 
@@ -119,6 +119,9 @@ namespace CS408_Project_Client
 
                 string incomingMessage = Encoding.Default.GetString(buffer);
                 incomingMessage = incomingMessage.Substring(0, incomingMessage.IndexOf("\0"));
+
+                string message = incomingMessage.Substring(0, incomingMessage.IndexOf("(end)"));
+                incomingMessage = incomingMessage.Substring(incomingMessage.IndexOf("(end)") + 5);
 
                 //If the client gets "NotSuccessful" message from the server side, this means
                 //that the client is either already connected or not in the database
@@ -177,82 +180,54 @@ namespace CS408_Project_Client
                 try
                 {
                     Byte[] Incomingbuffer = new Byte[128];
-                    
+
                     serverSocket.Receive(Incomingbuffer);
 
                     string incomingMessage = Encoding.Default.GetString(Incomingbuffer);
                     incomingMessage = incomingMessage.Substring(0, incomingMessage.IndexOf("\0"));
 
-                    char RequestCode = incomingMessage[0];
-                    incomingMessage = incomingMessage.Substring(1);
+                    while (incomingMessage.IndexOf("(end)") > 0)
+                    {
 
-                    if (RequestCode == broadcastMessageCode)
-                    {
-                        logs.AppendText(incomingMessage);
-                    }
-                    else if (RequestCode == getNotification[0])
-                    {
-                        logs.AppendText(incomingMessage);
-                    }
-                    else if (RequestCode == getRequests)
-                    {
-                        listBox_friendRequests.Items.Clear();
+                        string message = incomingMessage.Substring(0, incomingMessage.IndexOf("(end)"));
+                        incomingMessage = incomingMessage.Substring(incomingMessage.IndexOf("(end)") + 5);
+                        char RequestCode = message[0];
+                        message = message.Substring(1);
 
-                        int index;
-                        int len = incomingMessage.Length;
-                        for (int i = 0; i < len; i = index)
+                        if (RequestCode == broadcastMessageCode)
                         {
-                            index = incomingMessage.IndexOf("6");
-                            if (index < 0)
-                            {
-                                listBox_friendRequests.Items.Add(incomingMessage);
-                                index = len;
-                            }
-                            else
-                            {
-                                string x = incomingMessage.Substring(0, index);
-                                incomingMessage = incomingMessage.Substring(index + 1);
-                                listBox_friendRequests.Items.Add(x);
-                            }
+                            logs.AppendText(message + "\n");
                         }
-                        /*listBox_friendRequests.Items.Clear();
-                        if (incomingMessage != "")
+                        else if (RequestCode == notificationCode)
                         {
-                            string request = incomingMessage;
-                            listBox_friendRequests.Items.Add(request);
-                        }*/
-                    }
-                    else if (RequestCode == getFriends)
-                    {
-                        listBox_friendsList.Items.Clear();
-                        int index;
-                        int len = incomingMessage.Length;
-                        for (int i = 0; i < len; i = index)
+                            logs.AppendText(message + "\n");
+                        }
+                        else if (RequestCode == getRequests)
                         {
-                            index = incomingMessage.IndexOf("7");
-                            if (index < 0)
+
+                            if (!listBox_friendRequests.Items.Contains(message))
                             {
-                                listBox_friendsList.Items.Add(incomingMessage);
-                                index = len;
+                                string request = message;
+                                listBox_friendRequests.Items.Add(request);
                             }
-                            else
+
+
+                        }
+                        else if (RequestCode == getFriends)
+                        {
+
+
+                            if (!listBox_friendsList.Items.Contains(message))
                             {
-                                string x = incomingMessage.Substring(0, index);
-                                incomingMessage = incomingMessage.Substring(index + 1);
-                                listBox_friendsList.Items.Add(x);
+                                string request = message;
+                                listBox_friendsList.Items.Add(request);
                             }
                         }
 
-                        /*
-                        listBox_friendsList.Items.Clear();
-                        if (incomingMessage != "")
-                        {
-                            string friend = incomingMessage;
 
-                            listBox_friendsList.Items.Add(friend);
-                        }
-                        */
                     }
+
+
 
                 }
                 catch
@@ -276,7 +251,7 @@ namespace CS408_Project_Client
         private void send_name()
         {
             username = textBox_name.Text;
-            string outgoingMessage = nameCode + username;
+            string outgoingMessage = nameCode + username+"(end)";
 
             if (username != "" && username.Length <= 64)
             {
@@ -291,7 +266,7 @@ namespace CS408_Project_Client
         private void button_send_Click(object sender, EventArgs e)
         {
             string message = textBox_message.Text;
-            string outgoingMessage = broadcastMessageCode + message;
+            string outgoingMessage = broadcastMessageCode + message+ "(end)";
 
             //For simplicity, the length of the message should be smaller than 64 characters
             //serverSocket should be connected to proceed...
@@ -325,6 +300,10 @@ namespace CS408_Project_Client
                 button_reject.Enabled = false;
 
                 button_send.Enabled = false;
+
+                listBox_friendRequests.Items.Clear();
+                listBox_friendsList.Items.Clear();
+
                 serverSocket.Close();
             }
             catch
@@ -337,7 +316,7 @@ namespace CS408_Project_Client
         {
 
             string friendName = textBox_friendName.Text;
-            string goingFriendName = addFriendCode + friendName;
+            string goingFriendName = addFriendCode + friendName+ "(end)";
 
             if (serverSocket.Connected)
             {
@@ -354,7 +333,7 @@ namespace CS408_Project_Client
 
         private void sendNotification(string text)
         {
-            text = notificationCode + text;
+            text = notificationCode + text+ "(end)";
             Byte[] buffer = new Byte[128];
             buffer = Encoding.Default.GetBytes(text);
             serverSocket.Send(buffer);
@@ -363,22 +342,23 @@ namespace CS408_Project_Client
         private void button_accept_Click(object sender, EventArgs e)
         {
             string friend = listBox_friendRequests.GetItemText(listBox_friendRequests.SelectedItem);
-            string notification = "ACCEPTED" + friend;
+            string notification = "ACCEPTED" + friend+ "(end)";
             logs.AppendText("You are now friends with " + friend + "\n");
             sendNotification(notification);
-            Update_friends();
-            Update_requests();
+            listBox_friendRequests.Items.Remove(friend);
+            listBox_friendsList.Items.Add(friend);
+
         }
 
         private void button_reject_Click(object sender, EventArgs e)
         {
             string friend = listBox_friendRequests.GetItemText(listBox_friendRequests.SelectedItem);
 
-            string notification = "REJECTED" + friend;
+            string notification = "REJECTED" + friend+"(end)";
             logs.AppendText("You rejected friend request from " + friend + "\n");
 
             sendNotification(notification);
-            Update_requests();
+            listBox_friendRequests.Items.Remove(friend);
         }
         private void Form1_FormClosing(object sender, System.ComponentModel.CancelEventArgs e)
         {
