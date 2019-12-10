@@ -19,6 +19,9 @@ namespace CS408_Project_Client
         char getRequests = '6';
         char getFriends = '7';
         string updateFriends = "8";
+        char deletedCode = '9';
+        char privateMessageCode = '*';
+        char getPrivateMessagesCode = '#';
         string username = "";
 
 
@@ -108,6 +111,12 @@ namespace CS408_Project_Client
             getNotificationBuffer = Encoding.Default.GetBytes(getNotification+ "(end)");
             serverSocket.Send(getNotificationBuffer);
         }
+        private void Get_PrivateMessages()
+        {
+            Byte[] getNotificationBuffer = new Byte[128];
+            getNotificationBuffer = Encoding.Default.GetBytes(getPrivateMessagesCode + "(end)");
+            serverSocket.Send(getNotificationBuffer);
+        }
 
         //Getting an authentication from the server
         private void RecieveApproval()
@@ -121,11 +130,11 @@ namespace CS408_Project_Client
                 incomingMessage = incomingMessage.Substring(0, incomingMessage.IndexOf("\0"));
 
                 string message = incomingMessage.Substring(0, incomingMessage.IndexOf("(end)"));
-                incomingMessage = incomingMessage.Substring(incomingMessage.IndexOf("(end)") + 5);
+                
 
                 //If the client gets "NotSuccessful" message from the server side, this means
                 //that the client is either already connected or not in the database
-                if (incomingMessage == "NotSuccessful")
+                if (message == "NotSuccessful")
                 {
                     logs.AppendText("You are already connected or not registered! \n");
                     serverSocket.Close();
@@ -149,6 +158,7 @@ namespace CS408_Project_Client
                     Update_friends();
                     Update_requests();
                     Get_Notifications();
+                    Get_PrivateMessages();
 
                     Thread recieveThread = new Thread(recieve);
                     recieveThread.Start();
@@ -222,6 +232,14 @@ namespace CS408_Project_Client
                                 string request = message;
                                 listBox_friendsList.Items.Add(request);
                             }
+                        }
+                        else if (RequestCode == deletedCode)
+                        {
+                            listBox_friendsList.Items.Remove(message);
+                        }
+                        else if (RequestCode == privateMessageCode)
+                        {
+                            logs.AppendText(message + "\n");
                         }
 
 
@@ -333,7 +351,7 @@ namespace CS408_Project_Client
 
         private void sendNotification(string text)
         {
-            text = notificationCode + text+ "(end)";
+            text = notificationCode + text;
             Byte[] buffer = new Byte[128];
             buffer = Encoding.Default.GetBytes(text);
             serverSocket.Send(buffer);
@@ -360,11 +378,52 @@ namespace CS408_Project_Client
             sendNotification(notification);
             listBox_friendRequests.Items.Remove(friend);
         }
+
         private void Form1_FormClosing(object sender, System.ComponentModel.CancelEventArgs e)
         {
             terminating = true;
             connected = false;
             Environment.Exit(0);    //Exit safely...
+        }
+
+        private void btnDeleteFriend_Click(object sender, EventArgs e)
+        {
+            string friend = listBox_friendsList.GetItemText(listBox_friendsList.SelectedItem);
+
+            string notification = "DELETEDD" + friend + "(end)";
+            logs.AppendText("You are no longer friends with " + friend + "\n");
+
+            sendNotification(notification);
+            listBox_friendsList.Items.Remove(friend);
+        }
+
+        private void btnSendToFriends_Click(object sender, EventArgs e)
+        {
+            string message = textBox_message.Text;
+            string outgoingMessage = privateMessageCode + message + "(end)";
+
+            //For simplicity, the length of the message should be smaller than 64 characters
+            //serverSocket should be connected to proceed...
+            if (serverSocket.Connected)
+            {
+                if (listBox_friendsList.Items.Count != 0)
+                {
+                    if (message != "" && message.Length <= 128)
+                    {
+                        logs.AppendText(username + "(Private): " + message + "\n");
+                        Byte[] buffer = new Byte[128];
+                        buffer = Encoding.Default.GetBytes(outgoingMessage);
+                        serverSocket.Send(buffer);
+                        textBox_message.Clear();        //Clearing the textbox for the new usage
+                    }
+                    else
+                        logs.AppendText("Text must be less than or equal to 128 characters! \n");
+                }
+                else
+                    logs.AppendText("You have no friends to send message!\n");
+            }
+            else
+                logs.AppendText("The connection has lost with the server! \n");
         }
     }
 }

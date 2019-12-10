@@ -23,6 +23,9 @@ namespace CS408_Project_Server
         char getRequests = '6';
         char getFriends = '7';
         char updateFriends = '8';
+        char deletedCode = '9';
+        char privateMessageCode = '*';
+        char getPrivateMessagesCode = '#';
 
         Socket serverSocket = new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp);
         List<Socket> clientSockets = new List<Socket>();
@@ -211,10 +214,10 @@ namespace CS408_Project_Server
             logs.AppendText("Relayed friend requests to " + connectedUsers[thisClient] + "\n");
         }
 
-        private void sendFriends(Socket thisClient)
+        private void sendFriends(Socket thisClient,bool isDeleted= false)
         {
             List<string> myFriends = findClientBySocket(thisClient).GetFriends();
-            int i = 0;
+            
 
 
             foreach (string friend in myFriends)
@@ -226,7 +229,7 @@ namespace CS408_Project_Server
                 Byte[] requestBuffer = new Byte[64];
                 requestBuffer = Encoding.Default.GetBytes(requestWithCode);
                 thisClient.Send(requestBuffer);
-                i++;
+                
             }
 
 
@@ -236,13 +239,39 @@ namespace CS408_Project_Server
 
         }
 
+        private void sendPrivateMessages(Socket thisClient)
+        {
+            List<string> messages = findClientBySocket(thisClient).GetPrivateMessages();
+
+
+
+            foreach (string message in messages)
+            {
+                string requestWithCode;
+
+                requestWithCode = notificationCode + message ;
+
+                Byte[] requestBuffer = new Byte[64];
+                requestBuffer = Encoding.Default.GetBytes(requestWithCode);
+                thisClient.Send(requestBuffer);
+
+            }
+
+
+
+            logs.AppendText("Relayed private Messages to " + connectedUsers[thisClient] + "\n");
+
+
+        }
+
+
         private void sendNotifications(Socket thisClient)
         {
             List<string> notifications = findClientBySocket(thisClient).GetNotifications();
 
             foreach (string notification in notifications)
             {
-                string requestWithCode = notificationCode + notification ;
+                string requestWithCode = notificationCode + notification;
                 Byte[] requestBuffer = new Byte[64];
                 requestBuffer = Encoding.Default.GetBytes(requestWithCode);
                 thisClient.Send(requestBuffer);
@@ -252,7 +281,32 @@ namespace CS408_Project_Server
         }
 
 
+        private void privateMessage(Socket thisClient, string incomingMessage)
+        {
+            string outgoingMessage = connectedUsers[thisClient] + "(Private): " + incomingMessage + "(end)";
+            Byte[] Outgoingbuffer = new Byte[128];
+            outgoingMessage = privateMessageCode + outgoingMessage;
+            Outgoingbuffer = Encoding.Default.GetBytes(outgoingMessage);
 
+            logs.AppendText("Recieved a message from " + connectedUsers[thisClient] + " \n");
+
+            List<string> friendsList = findClientBySocket(thisClient).GetFriends();
+
+            foreach (string client in friendsList )
+            {
+                if (connectedUsers.ContainsValue(client))
+                {
+                    findClientByName(client).socket.Send(Outgoingbuffer);
+                }
+                else
+                {
+                    findClientByName(client).AddPrivateMessage(outgoingMessage.Substring(1));
+                }
+            }
+
+            //The server still sends the message although there is only one user 
+
+        }
 
         private void BroadCastMessage(Socket thisClient, string incomingMessage)
         {
@@ -382,6 +436,26 @@ namespace CS408_Project_Server
 
 
                 }
+                else if (status == "DELETEDD")
+                {
+                    string outgoingMessage = notificationCode + connectedUsers[thisClient] + " deleted you from friends list" + "(end)";    //this is not a broadcasting...
+
+                    Outgoingbuffer = Encoding.Default.GetBytes(outgoingMessage);
+
+
+                    findClientBySocket(thisClient).DeleteFriend(reciever);
+                    findClientByName(reciever).DeleteFriend(connectedUsers[thisClient]);
+
+                    string deletedFriend = deletedCode + connectedUsers[thisClient] + "(end)";
+
+                    Byte[] deletedFriendBuffer = new Byte[128];
+                    deletedFriendBuffer = Encoding.Default.GetBytes(deletedFriend);
+
+
+                    recieverSocket.Send(deletedFriendBuffer);
+                    //sendFriends(recieverSocket);
+                    logs.AppendText("Deletion from " + connectedUsers[thisClient] + " sent to " + reciever + ".\n");
+                }
                 else
                 {
                     string outgoingMessage = notificationCode + connectedUsers[thisClient] + " rejected your friend request." + "(end)";    //this is not a broadcasting...
@@ -409,6 +483,19 @@ namespace CS408_Project_Server
                     findClientByName(reciever).AddFriend(connectedUsers[thisClient]);
                     findClientByName(reciever).DeletePendingFriendRequest(connectedUsers[thisClient]);
                     findClientByName(reciever).AddNotification(connectedUsers[thisClient] + " accepted your friend request." + "(end)");
+                }
+                else if (status == "DELETEDD")
+                {
+
+
+
+                    findClientBySocket(thisClient).DeleteFriend(reciever);
+                    findClientByName(reciever).DeleteFriend(connectedUsers[thisClient]);
+
+                    findClientByName(reciever).AddNotification(connectedUsers[thisClient] + " deleted you from friends list" + "(end)");
+
+
+                    logs.AppendText("Deletion from " + connectedUsers[thisClient] + " to " + reciever + "stored.\n");
                 }
                 else
                 {
@@ -476,6 +563,14 @@ namespace CS408_Project_Server
 
                         else if (RequestCode == updateFriends)
                             sendFriends(thisClient);
+                        else if (RequestCode == privateMessageCode)
+                        {
+                            privateMessage(thisClient,message);
+                        }
+                        else if (RequestCode == getPrivateMessagesCode)
+                        {
+                            sendPrivateMessages(thisClient);
+                        }
                         else
                         {
                             logs.AppendText("Error...");

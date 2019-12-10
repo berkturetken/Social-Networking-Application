@@ -7,7 +7,7 @@ using System.Threading.Tasks;
 
 namespace CS408_Project_Server
 {
-     class Client
+    class Client
     {
         public Socket socket;
         public string name;
@@ -15,8 +15,9 @@ namespace CS408_Project_Server
         private List<string> friendRequests;
         private List<string> pendingFriendRequests;
         private List<string> waitingNotifications;
+        private List<string> privateMessages;
         public bool connected;
-        
+
 
         public Client(Socket socket = null, string name = null)
         {
@@ -27,10 +28,11 @@ namespace CS408_Project_Server
             this.friendRequests = new List<string>();
             this.pendingFriendRequests = new List<string>();
             this.waitingNotifications = new List<string>();
+            this.privateMessages = new List<string>();
 
         }
 
-        public Client( string name = null)
+        public Client(string name = null)
         {
             this.connected = false;
             this.socket = null;
@@ -39,6 +41,7 @@ namespace CS408_Project_Server
             friendRequests = new List<string>();
             pendingFriendRequests = new List<string>();
             this.waitingNotifications = new List<string>();
+            this.privateMessages = new List<string>();
 
         }
 
@@ -51,15 +54,26 @@ namespace CS408_Project_Server
         {
             this.friendRequests.Add(name);
         }
+
         public void AddNotification(string notification)
         {
             this.waitingNotifications.Add(notification);
         }
+
         public void AddPendingFriendRequest(string name)
         {
             this.pendingFriendRequests.Add(name);
         }
 
+        public void AddPrivateMessage(string message)
+        {
+            privateMessages.Add(message);
+        }
+
+        public void DeleteFriend(string name)
+        {
+            friends.Remove(name);
+        }
         public void DeleteFriendRequest(string name)
         {
             this.friendRequests.Remove(name);
@@ -71,11 +85,19 @@ namespace CS408_Project_Server
             this.pendingFriendRequests.Remove(name);
 
         }
+
         public void DeleteAllNotifications()
         {
-            this.waitingNotifications.RemoveRange(0,waitingNotifications.Count());
+            this.waitingNotifications.RemoveRange(0, waitingNotifications.Count());
 
         }
+
+        public void DeleteAllPrivateMessages()
+        {
+            this.privateMessages.RemoveRange(0, privateMessages.Count());
+
+        }
+
         public List<String> GetFriendRequests()
         {
             return friendRequests;
@@ -90,9 +112,15 @@ namespace CS408_Project_Server
         {
             return friends;
         }
+
         public List<String> GetNotifications()
         {
             return waitingNotifications;
+        }
+
+        public List<string> GetPrivateMessages()
+        {
+            return this.privateMessages;
         }
     }
 }
