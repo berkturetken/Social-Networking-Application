@@ -238,6 +238,7 @@ namespace CS408_Project_Server
                 requestBuffer = Encoding.Default.GetBytes(requestWithCode);
                 thisClient.Send(requestBuffer);
             }
+            findClientBySocket(thisClient).DeleteAllPrivateMessages();
             logs.AppendText("Relayed private Messages to " + connectedUsers[thisClient] + "\n");
         }
 

@@ -170,8 +170,9 @@ namespace CS408_Project_Client
                     logs.AppendText("Connected to the server!\n");
                     Update_friends();
                     Update_requests();
-                    Get_Notifications();
                     Get_PrivateMessages();
+                    Get_Notifications();
+                    
 
                     Thread recieveThread = new Thread(recieve);
                     recieveThread.Start();
