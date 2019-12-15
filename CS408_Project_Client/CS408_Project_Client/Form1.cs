@@ -68,7 +68,7 @@ namespace CS408_Project_Client
             if (Int32.TryParse(textBox_port.Text, out portNum))
             {
                 //Second, check the IP address
-                if (IP == currIP || IP == "")
+                if (IP == currIP || IP == currIP)
                 {
                     try
                     {
@@ -172,7 +172,6 @@ namespace CS408_Project_Client
                     Update_requests();
                     Get_PrivateMessages();
                     Get_Notifications();
-                    
 
                     Thread recieveThread = new Thread(recieve);
                     recieveThread.Start();
