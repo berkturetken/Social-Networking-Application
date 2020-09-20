@@ -1,4 +1,4 @@
-# CS408_SocialNetworkingApplication
+# Social Networking Application
  
 CS408 - Computer Networks - Fall 2019
 
